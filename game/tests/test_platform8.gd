@@ -42,6 +42,8 @@ func _test_save_data() -> void:
 	_check(r.found.has("clock_backwards") and r.best_station == 5 and r.clears == 2, "save round-trips progress")
 	_check(r.best_time == 300.0 and r.mouse_sensitivity == 1.5, "best time keeps the fastest; settings round-trip")
 	_check(SaveData.format_time(431.0) == "7:11", "time format m:ss")
+	r.found["removed_in_a_later_build"] = true
+	_check(r.found_count() == 1, "found count ignores ids not in the catalog")
 	var cfg := ConfigFile.new()
 	cfg.set_value("meta", "version", SaveData.VERSION + 1)
 	cfg.set_value("progress", "clears", 99)

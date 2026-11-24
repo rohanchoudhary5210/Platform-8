@@ -41,7 +41,7 @@ func build_lost_and_found(save: SaveData) -> GridContainer:
 	head.add_theme_font_size_override("font_size", 18)
 	var best := SaveData.format_time(save.best_time) if save.best_time > 0.0 else "—"
 	head.text = "\nLOST & FOUND   %d / %d\nbest station %d   ·   clears %d   ·   best time %s" % [
-		save.found.size(), AnomalyCatalog.ALL.size(), save.best_station, save.clears, best]
+		save.found_count(), AnomalyCatalog.ALL.size(), save.best_station, save.clears, best]
 	box.add_child(head)
 	var grid := GridContainer.new()
 	grid.name = "LostFound"

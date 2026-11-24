@@ -183,7 +183,7 @@ func _build_street() -> void:
 		_box(g, Vector3(0.5, 3.5, 10), Vector3(x, 1.5, 5.5), WALL)
 	var tube := OmniLight3D.new()
 	tube.position = Vector3(0, 2.7, 6)
-	tube.omni_range = 6
+	tube.omni_range = 5
 	tube.light_color = LIGHT_COLOUR
 	g.add_child(tube)
 	_label(g, "EXIT 8  ▶  STREET", Vector3(0, 2.6, 0.6), PI, 40).modulate = Color(0.4, 1.0, 0.5)
@@ -194,13 +194,13 @@ func _build_street() -> void:
 	_box(g, Vector3(1.2, 0.12, 0.3), Vector3(3.0, 5.0, 12.5), DARK, false)
 	var lamp := OmniLight3D.new()
 	lamp.position = Vector3(2.6, 4.8, 12.5)
-	lamp.omni_range = 16
+	lamp.omni_range = 11  # stops short of the concourse: no shadows in Compatibility, so it would shine through the wall
 	lamp.light_energy = 2.0
 	lamp.light_color = Color(1.0, 0.62, 0.25)
 	g.add_child(lamp)
 	var night := OmniLight3D.new()  # dim city glow so the buildings read against the sky
-	night.position = Vector3(0, 7, 20)
-	night.omni_range = 30
+	night.position = Vector3(0, 7, 24)
+	night.omni_range = 20
 	night.light_energy = 0.7
 	night.light_color = Color(0.55, 0.6, 0.85)
 	g.add_child(night)
@@ -214,7 +214,8 @@ func _build_street() -> void:
 		for j in 3:
 			var w := _box(g, Vector3(0.8, 0.9, 0.05), Vector3(x - 1.5 + j * 1.5, 2.5 + (i + j) % 3 * 2.2, 27.97), Color.WHITE, false)
 			w.material = glow
-	var out := _area(g, Vector3(6, 2, 1), Vector3(0, 1, 12))
+	# The whole street width, right at the corridor mouth, so you can't walk around it.
+	var out := _area(g, Vector3(40, 3, 1), Vector3(0, 1, 11))
 	out.body_entered.connect(func(b): if b is StationPlayer: exit_reached.emit())
 
 func _build_passage() -> void:

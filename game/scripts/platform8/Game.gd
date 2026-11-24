@@ -63,7 +63,7 @@ func _process(delta: float) -> void:
 		_run_time += delta
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _ended and event.is_action_pressed("ui_accept") and _scene:
+	if _ended and hud("End").visible and event.is_action_pressed("ui_accept") and _scene:
 		_scene.go_to(HOME_SCENE)
 
 func _physics_process(delta: float) -> void:
@@ -111,7 +111,7 @@ func _on_decided(took_back: bool) -> void:
 	if not correct:
 		_wrong_calls += 1
 	save.best_station = maxi(save.best_station, loop.count)
-	save.write()
+	_write_save()
 	if not correct:
 		await replay.play(anomaly, station.get_node_or_null(anomaly.slot_name) if anomaly else null, player.camera.fov)
 	atmosphere.riding = true
@@ -134,8 +134,9 @@ func _on_exit() -> void:
 		return
 	_ended = true
 	player.active = false
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	save.record_clear(_run_time)
-	save.write()
+	_write_save()
 	if _game:
 		_game.game_over("escaped")
 	_log("Run cleared", {"seconds": _run_time, "wrong_calls": _wrong_calls, "seed": director.seed_value})
@@ -151,8 +152,13 @@ func ending_text() -> String:
 	return "YOU MADE IT OUT\n\n" \
 		+ "time  %s     ·     wrong calls  %d\n" % [SaveData.format_time(_run_time), _wrong_calls] \
 		+ "anomalies found this run  %d     ·     Lost & Found  %d / %d\n\n" % [
-			_found_this_run, save.found.size(), AnomalyCatalog.ALL.size()] \
+			_found_this_run, save.found_count(), AnomalyCatalog.ALL.size()] \
 		+ "seed %d\n\nPress Enter" % director.seed_value
+
+func _write_save() -> void:
+	var err := save.write()
+	if err != OK and _logger:
+		_logger.warn("Save failed", {"path": save.path, "error": error_string(err)})
 
 func _say(text: String) -> void:
 	var pa := hud("PA")

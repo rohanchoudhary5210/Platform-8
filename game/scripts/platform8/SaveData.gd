@@ -42,6 +42,10 @@ func write() -> Error:
 	cfg.set_value("settings", "volume_db", volume_db)
 	return cfg.save(path)
 
+## Found anomalies that still exist in this build (old saves may list removed ones).
+func found_count() -> int:
+	return AnomalyCatalog.ALL.filter(func(d): return found.has(String(d.id))).size()
+
 func record_clear(seconds: float) -> void:
 	clears += 1
 	if best_time == 0.0 or seconds < best_time:

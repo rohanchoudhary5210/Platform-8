@@ -9,6 +9,7 @@ const PA_SECONDS := 5.0
 @onready var station: Station = $Station
 @onready var train: TrainInterior = $TrainInterior
 @onready var player: StationPlayer = $Player
+@onready var atmosphere: Atmosphere = $Atmosphere
 
 var loop := LoopManager.new()
 var director := AnomalyDirector.new(AnomalyCatalog.ALL)
@@ -62,7 +63,9 @@ func _on_boarded(took_opposite: bool) -> void:
 	var correct := loop.resolve(took_opposite)
 	if correct and anomaly:
 		director.mark_found(anomaly.id)
+	atmosphere.riding = true
 	await train.ride(loop.station_name, randf_range(RIDE_MIN, RIDE_MAX))
+	atmosphere.riding = false
 	_riding = false
 	var pa := "" if correct else "Yeh station %s hai." % loop.station_name
 	if loop.is_complete():
@@ -84,6 +87,7 @@ func _say(text: String) -> void:
 	_hud_pa.text = text
 	if text.is_empty():
 		return
+	atmosphere.chime()
 	await get_tree().create_timer(PA_SECONDS).timeout
 	if _hud_pa.text == text:
 		_hud_pa.text = ""

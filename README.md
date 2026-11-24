@@ -28,6 +28,8 @@ At the middle of the platform there are two open doors in the platform screen do
 - Wrong call: count goes back to 0, you come back to the **same** station, and the PA says *"Yeh station [name] hai."*
 - Reach **8 / 8**: the exit behind the starting point opens. Turn around and walk through it to finish.
 
+The station is meant to feel wrong even when it isn't: dark, low ceilings, fog, hum, footsteps echoing, distant trains. Judge only by the checklist below, not by mood.
+
 Each loop has 0 or 1 anomaly. The **first loop is always clean**, so the first right answer is always FORWARD.
 
 ## What "normal" looks like
@@ -38,7 +40,7 @@ Learn this on loop 1, it's what you compare against every time after.
 |---|---|
 | Concourse, over the passage opening | Station name in white capitals, `STATION n / 8` under it |
 | Concourse, left wall | Cream poster, **red square in the top-left corner**, text `SAFE TRAVEL →` / `KEEP LEFT` / `MIND THE GAP` |
-| All areas | Warm white ceiling lights |
+| All areas | Dim, pale greenish fluorescent lights. The tube over the train doors **always flickers** and the station hums, rumbles and sometimes screeches with a train you never see. **None of that is an anomaly.** |
 | Passage, right wall | **Red** fire extinguisher with a red `FIRE` label above it |
 | Platform, hanging board at the escalator bottom | Amber `NEXT TRAIN   2 MIN` |
 | Platform, far end wall | Station name again, in white capitals |
@@ -64,7 +66,7 @@ All of these mean: **take the OPPOSITE (left) train.**
 
 ### 4. Red emergency lighting — everywhere
 - **Where:** every ceiling light in the station.
-- **Tell:** the whole station is lit **dim red** instead of warm white.
+- **Tell:** the whole station is lit **dim red** instead of pale green.
 - **Tip:** the easiest one; if the station looks red, go OPPOSITE.
 
 ### 5. "Next train: 88 min" — platform
@@ -77,7 +79,7 @@ If all six "normal" checks above match, take the **FORWARD (right)** train.
 
 ## Quick checklist per loop
 
-1. Spawn: name sign correct? Lights white? Poster square top-left?
+1. Spawn: name sign correct? Lights pale green, not red? Poster square top-left?
 2. Passage: extinguisher red?
 3. Escalator bottom: board says `2 MIN`?
 4. Platform: far-wall name correct?
@@ -95,7 +97,7 @@ Every loop prints a line to Godot's **Output** panel:
 
 ## Tests
 
-From this folder (takes about 45 s, mostly the real-time walk test):
+From this folder (takes about 65 s, mostly the real-time walk test):
 
 ```powershell
 & "C:\Users\Asus\Downloads\Godot_v4.7-stable_win64.exe\Godot_v4.7-stable_win64_console.exe" --headless -s res://game/tests/test_platform8.gd

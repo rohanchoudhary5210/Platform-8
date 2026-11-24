@@ -8,10 +8,10 @@ extends Node3D
 signal boarded(took_opposite: bool)
 signal exit_reached
 
-const WALL := Color(0.62, 0.6, 0.56)
+const WALL := Color(0.5, 0.5, 0.46)
 const FLOOR := Color(0.32, 0.32, 0.34)
 const DARK := Color(0.12, 0.12, 0.13)
-const LIGHT_COLOUR := Color(1.0, 0.95, 0.85)
+const LIGHT_COLOUR := Color(0.82, 1.0, 0.86)  # tired fluorescent tubes
 const ESC_DROP := 10.0
 const ESC_RUN := 20.0
 
@@ -23,6 +23,7 @@ var _line_mat := StandardMaterial3D.new()
 var _number: Label3D
 var _exit_barrier: CSGBox3D
 var _exit_label: Label3D
+var _flicker_wait := 0.0
 
 func _ready() -> void:
 	props = _node("Props", self)
@@ -68,21 +69,21 @@ func snapshot() -> Dictionary:
 func _build_concourse() -> void:
 	var g := _node("Concourse", self)
 	_box(g, Vector3(20, 0.5, 20), Vector3(0, -0.25, -10), FLOOR)
-	_box(g, Vector3(20, 0.5, 20), Vector3(0, 4.25, -10), WALL)
+	_box(g, Vector3(20, 0.5, 20), Vector3(0, 3.65, -10), WALL)
 	_box(g, Vector3(0.5, 4.5, 20), Vector3(-10.25, 2, -10), WALL)
 	_box(g, Vector3(0.5, 4.5, 20), Vector3(10.25, 2, -10), WALL)
 	# Back wall with the exit gap behind the spawn.
 	_box(g, Vector3(8.5, 4.5, 0.5), Vector3(-5.75, 2, 0.25), WALL)
 	_box(g, Vector3(8.5, 4.5, 0.5), Vector3(5.75, 2, 0.25), WALL)
 	_exit_barrier = _box(g, Vector3(3, 4.5, 0.5), Vector3(0, 2, 0.25), DARK)
-	_exit_label = _label(g, "EXIT CLOSED", Vector3(0, 3.6, -0.05), PI, 64)
+	_exit_label = _label(g, "EXIT CLOSED", Vector3(0, 2.9, -0.05), PI, 64)
 	_box(g, Vector3(3, 0.5, 3), Vector3(0, -0.25, 1.5), FLOOR)
 	var exit_area := _area(g, Vector3(3, 2, 1), Vector3(0, 1, 2))
 	exit_area.body_entered.connect(func(b): if b is StationPlayer: exit_reached.emit())
 	# Front wall with the passage opening.
 	_box(g, Vector3(8, 4.5, 0.5), Vector3(-6, 2, -20.25), WALL)
 	_box(g, Vector3(8, 4.5, 0.5), Vector3(6, 2, -20.25), WALL)
-	_box(g, Vector3(4, 1.5, 0.5), Vector3(0, 3.75, -20.25), WALL)
+	_box(g, Vector3(4, 1, 0.5), Vector3(0, 2.95, -20.25), WALL)
 	# Line colour stripe.
 	for x in [-9.98, 9.98]:
 		var stripe := _box(g, Vector3(0.05, 0.3, 20), Vector3(x, 1.2, -10), Color.WHITE, false)
@@ -100,7 +101,7 @@ func _build_concourse() -> void:
 func _build_passage() -> void:
 	var g := _node("Passage", self)
 	_box(g, Vector3(4, 0.5, 20), Vector3(0, -0.25, -30), FLOOR)
-	_box(g, Vector3(4, 0.5, 20), Vector3(0, 3.25, -30), WALL)
+	_box(g, Vector3(4, 0.5, 20), Vector3(0, 2.75, -30), WALL)
 	_box(g, Vector3(0.5, 3.5, 20), Vector3(-2.25, 1.5, -30), WALL)
 	_box(g, Vector3(0.5, 3.5, 20), Vector3(2.25, 1.5, -30), WALL)
 
@@ -110,20 +111,20 @@ func _build_escalator() -> void:
 	var tilt := -atan2(ESC_DROP, ESC_RUN)
 	var mid := Vector3(0, -ESC_DROP / 2.0, -40 - ESC_RUN / 2.0)
 	_box(g, Vector3(4, 0.5, length), mid + Vector3(0, -0.25, 0), Color(0.45, 0.45, 0.47)).rotation.x = tilt
-	_box(g, Vector3(4, 0.5, length), mid + Vector3(0, 3.75, 0), WALL).rotation.x = tilt
+	_box(g, Vector3(4, 0.5, length), mid + Vector3(0, 3.0, 0), WALL).rotation.x = tilt
 	for x in [-2.25, 2.25]:
 		_box(g, Vector3(0.5, 4.5, length), mid + Vector3(x, 1.75, 0), WALL).rotation.x = tilt
-	_box(g, Vector3(6, 3, 0.5), Vector3(0, 4.5, -40.25), WALL)  # seals passage/escalator ceiling seam
+	_box(g, Vector3(6, 3.5, 0.5), Vector3(0, 4.25, -40.25), WALL)  # seals passage/escalator ceiling seam
 
 func _build_platform() -> void:
 	var g := _node("Platform", self)
 	var y := -ESC_DROP
 	_box(g, Vector3(8, 0.5, 50), Vector3(0, y - 0.25, -85), FLOOR)
-	_box(g, Vector3(20, 0.5, 50), Vector3(0, y + 4.75, -85), WALL)
+	_box(g, Vector3(20, 0.5, 50), Vector3(0, y + 3.75, -85), WALL)
 	_box(g, Vector3(20, 6, 0.5), Vector3(0, y + 2, -110.25), WALL)
 	_box(g, Vector3(8, 6, 0.5), Vector3(-6, y + 2, -59.75), WALL)
 	_box(g, Vector3(8, 6, 0.5), Vector3(6, y + 2, -59.75), WALL)
-	_box(g, Vector3(4, 1.5, 0.5), Vector3(0, y + 4.25, -59.75), WALL)
+	_box(g, Vector3(4, 1.5, 0.5), Vector3(0, y + 3.25, -59.75), WALL)
 	for side in [-1, 1]:
 		_box(g, Vector3(6, 0.5, 50), Vector3(side * 7, y - 1.75, -85), DARK)
 		_box(g, Vector3(0.5, 7, 50), Vector3(side * 10.25, y + 1.5, -85), WALL)
@@ -143,9 +144,9 @@ func _build_platform() -> void:
 
 func _build_props() -> void:
 	var signs := _node("Signs", props)
-	_label(signs, "", Vector3(0, 3.75, -19.95), 0, 110).name = "ConcourseSign"
-	_label(signs, "", Vector3(0, -7.0, -109.95), 0, 110).name = "PlatformSign"
-	_number = _label(self, "", Vector3(0, 3.2, -19.95), 0, 40)
+	_label(signs, "", Vector3(0, 3.05, -19.95), 0, 90).name = "ConcourseSign"
+	_label(signs, "", Vector3(0, -7.1, -109.95), 0, 110).name = "PlatformSign"
+	_number = _label(self, "", Vector3(0, 2.65, -19.95), 0, 40)
 
 	var poster := _node("Poster", props)
 	poster.position = Vector3(-9.95, 1.9, -9)
@@ -170,12 +171,13 @@ func _build_props() -> void:
 	board.modulate = Color(1.0, 0.7, 0.1)
 
 func _build_lights() -> void:
-	for p in [Vector3(0, 3.8, -5), Vector3(0, 3.8, -14), Vector3(0, 2.8, -30), Vector3(0, -2, -50),
-			Vector3(0, -6, -68), Vector3(0, -6, -85), Vector3(0, -6, -102)]:
+	for p in [Vector3(0, 3.2, -5), Vector3(0, 3.2, -14), Vector3(0, 2.3, -30), Vector3(0, -2.6, -50),
+			Vector3(0, -6.8, -68), Vector3(0, -6.8, -85), Vector3(0, -6.8, -102),
+			Vector3(-8.8, 2.9, -9)]:  # last one lights the poster
 		var l := OmniLight3D.new()
 		l.position = p
-		l.omni_range = 13
-		l.light_energy = 1.3
+		l.omni_range = 9
+		l.light_energy = 1.0
 		l.light_color = LIGHT_COLOUR
 		lights.add_child(l)
 
@@ -221,3 +223,13 @@ func _area(parent: Node, size: Vector3, pos: Vector3) -> Area3D:
 	a.add_child(shape)
 	parent.add_child(a)
 	return a
+
+## The tube over the train doors flickers every loop. Toggles visible only, so the red-light anomaly still tints it.
+func _process(delta: float) -> void:
+	_flicker_wait -= delta
+	if _flicker_wait > 0.0:
+		return
+	var l: OmniLight3D = lights.get_child(5)
+	l.visible = not l.visible
+	# Mostly on, with short bursts of dropouts.
+	_flicker_wait = randf_range(0.03, 0.12) if not l.visible or randf() < 0.4 else randf_range(1.5, 5.0)

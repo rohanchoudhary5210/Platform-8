@@ -1,0 +1,20 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/StationPlayer.gd" id="1_p"]
+
+[sub_resource type="CapsuleShape3D" id="cap"]
+radius = 0.3
+height = 1.8
+
+[node name="Player" type="CharacterBody3D"]
+floor_snap_length = 0.5
+script = ExtResource("1_p")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("cap")
+
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Head"]
+current = true

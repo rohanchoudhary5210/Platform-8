@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AnomalyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/AnomalyData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"next_train_88"
+display_name = "Next train: 88 min"
+category = &"signage"
+tier = 1
+solo_ok = true
+visible_on = &"platform"
+script_path = "res://game/scripts/platform8/anomalies/NextTrain88.gd"
+slot_name = NodePath("Props/NextTrainBoard")

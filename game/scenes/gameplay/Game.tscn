@@ -1,0 +1,25 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/Game.gd" id="1_g"]
+[ext_resource type="PackedScene" path="res://game/scenes/gameplay/Station.tscn" id="2_st"]
+[ext_resource type="PackedScene" path="res://game/scenes/gameplay/TrainInterior.tscn" id="3_tr"]
+[ext_resource type="PackedScene" path="res://game/scenes/gameplay/Player.tscn" id="4_pl"]
+
+[sub_resource type="Environment" id="env"]
+background_mode = 1
+background_color = Color(0, 0, 0, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.3, 0.3, 0.33, 1)
+
+[node name="Game" type="Node3D"]
+script = ExtResource("1_g")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
+
+[node name="Station" parent="." instance=ExtResource("2_st")]
+
+[node name="TrainInterior" parent="." instance=ExtResource("3_tr")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -200, 0)
+
+[node name="Player" parent="." instance=ExtResource("4_pl")]

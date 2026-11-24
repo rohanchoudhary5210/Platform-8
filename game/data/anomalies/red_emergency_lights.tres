@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AnomalyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/AnomalyData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"red_emergency_lights"
+display_name = "Red emergency lighting"
+category = &"lighting"
+tier = 1
+solo_ok = true
+visible_on = &"concourse"
+script_path = "res://game/scripts/platform8/anomalies/RedEmergencyLights.gd"
+slot_name = NodePath("Lights")

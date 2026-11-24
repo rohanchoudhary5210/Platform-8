@@ -12,6 +12,8 @@ signal exit_reached
 const WALL := Color(0.5, 0.5, 0.46)
 const FLOOR := Color(0.32, 0.32, 0.34)
 const DARK := Color(0.12, 0.12, 0.13)
+const CEILING := Color(0.45, 0.45, 0.44)
+const CONCRETE := Color(0.2, 0.2, 0.2)
 const STEEL := Color(0.7, 0.72, 0.75)
 const YELLOW := Color(0.85, 0.7, 0.1)
 const LIGHT_COLOUR := Color(0.82, 1.0, 0.86)  # tired fluorescent tubes
@@ -21,6 +23,14 @@ const ESC_STEPS := 16
 const GATE_OPEN_DISTANCE := 2.0
 const FLICKER_LIGHT := "L5"  # the tube over the train doors
 const MODELS := "res://game/assets/models/%s.gltf"  # built by art/build_props.py
+## Tiled surfaces (art/build_textures.py): colour -> [texture, tint]. Each texture covers 1.2 m, mapped world-space.
+const SURFACES := {
+	WALL: ["wall_tile", Color(0.8, 0.8, 0.76)],
+	FLOOR: ["floor_tile", Color(0.75, 0.75, 0.75)],
+	CEILING: ["ceiling", Color(0.7, 0.7, 0.7)],
+	CONCRETE: ["concrete", Color(0.8, 0.8, 0.8)],
+}
+const TILE_METRES := 1.2
 
 var spawn: Marker3D
 var props: Node3D
@@ -38,6 +48,7 @@ var _door_fill: Array[CSGBox3D] = []
 var _esc_offset := 0.0
 var _player: Node3D
 var _second_hand: Node3D
+var _surface_mats := {}
 
 func _ready() -> void:
 	props = _node("Props", self)
@@ -131,7 +142,7 @@ func _flicker(delta: float) -> void:
 func _build_concourse() -> void:
 	var g := _node("Concourse", self)
 	_box(g, Vector3(20, 0.5, 20), Vector3(0, -0.25, -10), FLOOR)
-	_box(g, Vector3(20, 0.5, 20), Vector3(0, 3.65, -10), WALL)
+	_box(g, Vector3(20, 0.5, 20), Vector3(0, 3.65, -10), CEILING)
 	_box(g, Vector3(0.5, 4.5, 20), Vector3(-10.25, 2, -10), WALL)
 	_box(g, Vector3(0.5, 4.5, 20), Vector3(10.25, 2, -10), WALL)
 	# Back wall with the exit gap behind the spawn.
@@ -168,7 +179,7 @@ func _build_concourse() -> void:
 func _build_passage() -> void:
 	var g := _node("Passage", self)
 	_box(g, Vector3(4, 0.5, 20), Vector3(0, -0.25, -30), FLOOR)
-	_box(props, Vector3(4, 0.5, 20), Vector3(0, 2.75, -30), WALL).name = "PassageCeiling"
+	_box(props, Vector3(4, 0.5, 20), Vector3(0, 2.75, -30), CEILING).name = "PassageCeiling"
 	_box(g, Vector3(0.5, 3.5, 20), Vector3(-2.25, 1.5, -30), WALL)
 	_box(g, Vector3(0.5, 3.5, 20), Vector3(2.25, 1.5, -30), WALL)
 
@@ -177,7 +188,7 @@ func _build_escalator() -> void:
 	var tilt := _esc_tilt()
 	var mid := Vector3(0, -ESC_DROP / 2.0, -40 - ESC_RUN / 2.0)
 	_box(g, Vector3(4, 0.5, _esc_length()), mid + Vector3(0, -0.25, 0), Color(0.45, 0.45, 0.47)).rotation.x = tilt
-	_box(g, Vector3(4, 0.5, _esc_length()), mid + Vector3(0, 3.0, 0), WALL).rotation.x = tilt
+	_box(g, Vector3(4, 0.5, _esc_length()), mid + Vector3(0, 3.0, 0), CEILING).rotation.x = tilt
 	for x in [-2.25, 2.25]:
 		_box(g, Vector3(0.5, 4.5, _esc_length()), mid + Vector3(x, 1.75, 0), WALL).rotation.x = tilt
 	_box(g, Vector3(6, 3.5, 0.5), Vector3(0, 4.25, -40.25), WALL)  # seals passage/escalator ceiling seam
@@ -186,7 +197,7 @@ func _build_platform() -> void:
 	var g := _node("Platform", self)
 	var y := -ESC_DROP
 	_box(g, Vector3(8, 0.5, 50), Vector3(0, y - 0.25, -85), FLOOR)
-	_box(g, Vector3(20, 0.5, 50), Vector3(0, y + 3.75, -85), WALL)
+	_box(g, Vector3(20, 0.5, 50), Vector3(0, y + 3.75, -85), CEILING)
 	_box(g, Vector3(20, 6, 0.5), Vector3(0, y + 2, -110.25), WALL)
 	_box(g, Vector3(8, 6, 0.5), Vector3(-6, y + 2, -59.75), WALL)
 	_box(g, Vector3(8, 6, 0.5), Vector3(6, y + 2, -59.75), WALL)
@@ -194,7 +205,9 @@ func _build_platform() -> void:
 	for z in [-95.0, -104.0]:
 		_model("bench", g, "Bench", Vector3(0, y, z), PI / 2, Vector3(0.45, 0.8, 1.7))
 	for side in [-1, 1]:
-		_box(g, Vector3(6, 0.5, 50), Vector3(side * 7, y - 1.75, -85), DARK)
+		_box(g, Vector3(6, 0.5, 50), Vector3(side * 7, y - 1.75, -85), CONCRETE)
+		for rail in [-0.75, 0.75]:
+			_box(g, Vector3(0.08, 0.35, 50), Vector3(side * 7 + rail, y - 1.325, -85), STEEL, false)  # top at coach wheel level
 		_box(g, Vector3(0.5, 7, 50), Vector3(side * 10.25, y + 1.5, -85), WALL)
 		var stripe := _box(g, Vector3(0.05, 0.4, 50), Vector3(side * 9.98, y + 2.5, -85), Color.WHITE, false)
 		stripe.material = _line_mat
@@ -203,8 +216,12 @@ func _build_platform() -> void:
 		_box(g, Vector3(0.2, 2.2, 23), Vector3(side * 4.1, y + 1.1, -98.5), STEEL)
 		_door_fill.append(_box(g, Vector3(0.12, 2.2, 4), Vector3(side * 4.1, y + 1.1, -85), Color(0.55, 0.6, 0.65)))
 		_box(g, Vector3(1.4, 0.5, 4), Vector3(side * 4.8, y - 0.25, -85), FLOOR)
-		# Train body (visual only; the choice fires as soon as you step through the door).
-		_box(g, Vector3(3, 3.6, 40), Vector3(side * 7, y + 0.6, -85), Color(0.78, 0.8, 0.83), false)
+		# Two coaches (visual only; the choice fires as soon as you step through the door).
+		# Coach origin is rail top, floor 1.15 m above it = platform level; a coach door lines up with z = -85.
+		for z in [-77.5, -97.8]:
+			var coach := _model("train_coach", g, "Coach", Vector3(side * 7, y - 1.15, z))
+			for band in coach.find_children("Stripe*", "MeshInstance3D", true, false):
+				band.material_override = _line_mat
 		for z in [-70.0, -100.0]:
 			var pillar := _model("pillar", g, "Pillar", Vector3(side * 2.6, y, z), 0.0, Vector3(0.7, 3.4, 0.7))
 			pillar.scale.y = 3.5 / 3.4  # platform ceiling is a touch higher than the concourse
@@ -312,10 +329,10 @@ func _build_props() -> void:
 		s.rotation.x = _esc_tilt()
 
 	var boards := _node("TrainBoards", props)
-	var fwd := _label(boards, "", Vector3(5.47, -8.9, -85), -PI / 2, 40)
+	var fwd := _label(boards, "", Vector3(5.47, -8.3, -85), -PI / 2, 40)
 	fwd.name = "Forward"
 	fwd.modulate = Color(1.0, 0.55, 0.1)
-	var opp := _label(boards, "TERMINUS  ◀", Vector3(-5.47, -8.9, -85), PI / 2, 40)
+	var opp := _label(boards, "TERMINUS  ◀", Vector3(-5.47, -8.3, -85), PI / 2, 40)
 	opp.name = "Opposite"
 	opp.modulate = Color(1.0, 0.55, 0.1)
 
@@ -418,9 +435,24 @@ func _node(n: String, parent: Node) -> Node3D:
 	return node
 
 func _mat(c: Color) -> StandardMaterial3D:
+	if SURFACES.has(c):
+		return _surface(c)
 	var m := StandardMaterial3D.new()
 	m.albedo_color = c
 	return m
+
+## One shared, world-space tiled material per surface type, so walls line up across separate boxes.
+func _surface(c: Color) -> StandardMaterial3D:
+	if not _surface_mats.has(c):
+		var m := StandardMaterial3D.new()
+		m.albedo_texture = load("res://game/assets/textures/%s.png" % SURFACES[c][0])
+		m.albedo_color = SURFACES[c][1]
+		m.uv1_triplanar = true
+		m.uv1_world_triplanar = true
+		m.uv1_scale = Vector3.ONE / TILE_METRES
+		m.roughness = 0.6 if c == FLOOR else 0.85
+		_surface_mats[c] = m
+	return _surface_mats[c]
 
 func _box(parent: Node, size: Vector3, pos: Vector3, c: Color, collide := true) -> CSGBox3D:
 	var b := CSGBox3D.new()

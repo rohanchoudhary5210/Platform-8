@@ -13,17 +13,10 @@ var _display: Label3D
 var _tunnel_lights: Array[Node3D] = []
 
 func _ready() -> void:
-	var floor_c := Color(0.3, 0.3, 0.32)
-	var wall := Color(0.85, 0.86, 0.88)
-	_box(Vector3(3, 0.2, 16), Vector3(0, -0.1, 0), floor_c)
-	_box(Vector3(3, 0.2, 16), Vector3(0, 2.5, 0), wall)
+	# Coach model from art/build_props.py: window band at y 1.0–1.8, long benches, poles.
+	add_child(load("res://game/assets/models/coach_interior.gltf").instantiate())
 	for x in [-1.5, 1.5]:
-		_box(Vector3(0.1, 1.0, 16), Vector3(x, 0.5, 0), wall)   # below window
-		_box(Vector3(0.1, 0.6, 16), Vector3(x, 2.1, 0), wall)   # above window
-		_box(Vector3(0.5, 0.45, 12), Vector3(x * 0.8, 0.22, 0), Color(0.25, 0.35, 0.6))  # bench
 		_box(Vector3(0.2, 3.2, 40), Vector3(x * 2.4, 1.2, 0), Color(0.05, 0.05, 0.05))  # tunnel wall
-	for z in [-8.0, 8.0]:
-		_box(Vector3(3, 2.6, 0.1), Vector3(0, 1.2, z), wall)
 
 	var lamp := OmniLight3D.new()
 	lamp.position = Vector3(0, 2.2, 0)

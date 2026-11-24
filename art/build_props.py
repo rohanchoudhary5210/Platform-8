@@ -217,8 +217,86 @@ def token_machine():
     return r
 
 
+# ── Trains ───────────────────────────────────────────────────────────────
+COACH_LEN = 20.0
+DOOR_Y = (-7.5, -2.5, 2.5, 7.5)  # door centres along the coach
+FLOOR_Z = 1.15  # coach floor above rail top (= platform height)
+
+
+def train_coach():
+    """Exterior of one 20 m coach, origin at rail-top centre. Doors on both sides at DOOR_Y.
+    LineStripe is the line colour band; the game can tint it."""
+    r = root("train_coach")
+    body = mat("CoachBody", (0.78, 0.8, 0.83), 0.35, 0.4)
+    glass = mat("CoachGlass", (0.03, 0.04, 0.05), 0.0, 0.1)
+    door = mat("CoachDoor", (0.68, 0.7, 0.73), 0.35, 0.35)
+    stripe = mat("LineStripe", (0.84, 0.2, 0.42))
+    w, top = 3.0, 4.0
+    box("Body", r, body, (w, COACH_LEN, top - 0.55), (0, 0, 0.55 + (top - 0.55) / 2), bevel=0.04)
+    box("Roof", r, mat("CoachRoof", (0.55, 0.56, 0.58), 0.3, 0.5), (w - 0.3, COACH_LEN - 0.4, 0.15), (0, 0, top + 0.07))
+    box("Skirt", r, DARK(), (w - 0.2, COACH_LEN - 1.0, 0.5), (0, 0, 0.4))
+    for y in (-COACH_LEN / 2 + 3.0, COACH_LEN / 2 - 3.0):  # bogies
+        box(f"Bogie{y}", r, DARK(), (2.2, 2.6, 0.45), (0, y, 0.25))
+        for wy in (-0.9, 0.9):
+            cyl(f"Wheel{y}_{wy}", r, DARK(), 0.42, 2.4, (0, y + wy, 0.42), rot=(0, 1.5708, 0), verts=16)
+    for side in (-1, 1):
+        x = side * (w / 2 + 0.005)
+        box(f"Stripe{side}", r, stripe, (0.01, COACH_LEN - 0.2, 0.18), (x, 0, FLOOR_Z + 0.45))
+        # Window band between doors.
+        edges = [-COACH_LEN / 2 + 0.6] + [e for y in DOOR_Y for e in (y - 0.85, y + 0.85)] + [COACH_LEN / 2 - 0.6]
+        for i in range(0, len(edges), 2):
+            a, b = edges[i], edges[i + 1]
+            if b - a > 0.6:
+                box(f"Window{side}_{i}", r, glass, (0.01, b - a - 0.3, 0.85), (x, (a + b) / 2, FLOOR_Z + 1.35))
+        for j, y in enumerate(DOOR_Y):
+            for k, dy in enumerate((-0.35, 0.35)):
+                box(f"Door{side}_{j}_{k}", r, door, (0.02, 0.69, 2.0), (x + side * 0.005, y + dy, FLOOR_Z + 1.0))
+                box(f"DoorGlass{side}_{j}_{k}", r, glass, (0.01, 0.4, 0.7), (x + side * 0.016, y + dy, FLOOR_Z + 1.5))
+    for end in (-1, 1):
+        box(f"EndDoor{end}", r, door, (0.9, 0.02, 2.0), (0, end * (COACH_LEN / 2 + 0.005), FLOOR_Z + 1.0))
+    return r
+
+
+def coach_interior():
+    """Inside of one coach for the ride: 3 m wide, 16 m long, floor at origin.
+    Window band at z 1.0–1.8 (tunnel lights scroll past outside it). Long benches, poles, grab rails."""
+    r = root("coach_interior")
+    wall = mat("CoachWall", (0.85, 0.86, 0.88), 0.1, 0.5)
+    seat = mat("SeatBlue", (0.18, 0.28, 0.55), 0.2, 0.4)
+    pole = mat("Pole", (0.75, 0.6, 0.15), 0.4, 0.3)
+    length, half = 16.0, 1.5
+    box("Floor", r, mat("CoachFloor", (0.3, 0.32, 0.35), 0.0, 0.7), (3.0, length, 0.1), (0, 0, -0.05))
+    box("Ceiling", r, wall, (3.0, length, 0.1), (0, 0, 2.5))
+    for i in range(5):
+        box(f"LightStrip{i}", r, mat("CoachLight", (1, 1, 0.95), emit=(1, 0.98, 0.9)), (0.25, 2.4, 0.02),
+            (0, -6.4 + i * 3.2, 2.44))
+    door_y = (-4.0, 4.0)
+    for side in (-1, 1):
+        x = side * half
+        box(f"WallLow{side}", r, wall, (0.06, length, 1.0), (x, 0, 0.5))
+        box(f"WallHigh{side}", r, wall, (0.06, length, 0.7), (x, 0, 2.15))
+        for y in (-7.0, -1.6, 1.6, 7.0):  # window pillars
+            box(f"Pillar{side}_{y}", r, wall, (0.08, 0.25, 0.8), (x, y, 1.4))
+        for j, y in enumerate(door_y):
+            box(f"Door{side}_{j}", r, mat("CoachDoorIn", (0.65, 0.67, 0.7), 0.3, 0.35), (0.05, 1.3, 2.0), (x * 0.99, y, 1.0))
+            box(f"DoorGlass{side}_{j}", r, mat("CoachGlass", (0.03, 0.04, 0.05), 0.0, 0.1), (0.06, 0.8, 0.6), (x * 0.99, y, 1.45))
+        # Long bench seats between the doors, like Indian metro coaches.
+        for y0, y1 in ((-7.6, -4.9), (-3.1, 3.1), (4.9, 7.6)):
+            box(f"Seat{side}_{y0}", r, seat, (0.45, y1 - y0, 0.08), (side * (half - 0.28), (y0 + y1) / 2, 0.45))
+            box(f"SeatBack{side}_{y0}", r, seat, (0.06, y1 - y0, 0.45), (side * (half - 0.06), (y0 + y1) / 2, 0.75))
+            box(f"SeatBase{side}_{y0}", r, DARK(), (0.4, y1 - y0, 0.4), (side * (half - 0.28), (y0 + y1) / 2, 0.2))
+        for y in (-5.2, -2.0, 2.0, 5.2):  # vertical poles at seat ends
+            cyl(f"Pole{side}_{y}", r, pole, 0.02, 2.5, (side * 0.85, y, 1.25), verts=10)
+        cyl(f"GrabRail{side}", r, pole, 0.018, length - 1, (side * 0.6, 0, 2.05), rot=(1.5708, 0, 0), verts=10)
+    for end in (-1, 1):
+        box(f"EndWall{end}", r, wall, (3.0, 0.08, 2.5), (0, end * length / 2, 1.25))
+        box(f"Gangway{end}", r, DARK(), (1.1, 0.1, 2.0), (0, end * (length / 2 - 0.02), 1.0))
+    return r
+
+
 PROPS = [dustbin, fire_extinguisher, water_cooler, cctv_camera, wall_clock, afc_gate, bench, pillar,
          lift_doors, token_machine]
+TRAINS = [train_coach, coach_interior]  # exported too, but kept out of the small-prop preview grid
 
 
 # ── Build, export, preview ───────────────────────────────────────────────
@@ -238,7 +316,7 @@ def reset():
 
 def main():
     # One clean scene per prop, so part names stay exact (no "Body.001") in the exported file.
-    for p in PROPS:
+    for p in PROPS + TRAINS:
         reset()
         r = p()
         select_tree(r)
@@ -251,6 +329,8 @@ def main():
         r.location = (i % 5 * 2.2, i // 5 * 3.0, 0)
     roots[3].location.z = 2.0  # CCTV hangs from its ceiling point
     roots[4].location.z = 1.5  # wall clock
+    for i, t in enumerate(TRAINS):
+        t().location = (6 + i * 5, 14, 0)  # in the .blend, behind the preview grid
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(ROOT, "art", "platform8_props.blend"))
     preview()
 

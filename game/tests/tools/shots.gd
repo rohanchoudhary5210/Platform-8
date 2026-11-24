@@ -13,7 +13,7 @@ func _initialize() -> void:
 		"escalator": [Vector3(0, 1, -38), 0.0], "platform": [Vector3(0, -9, -62), 0.0],
 		"doors": [Vector3(0, -9, -85), -PI / 2],
 		"right_wall": [Vector3(4, 1, -11), -PI / 2], "front_wall": [Vector3(-3, 1, -10), 0.0],
-		"esc_bottom": [Vector3(0, -9, -57), PI],
+		"esc_bottom": [Vector3(0, -9, -57), PI], "platform_side": [Vector3(3.0, -8.4, -63), -0.35],
 	}
 	for k in views:
 		game.player.place(Transform3D(Basis(Vector3.UP, views[k][1]), views[k][0]))

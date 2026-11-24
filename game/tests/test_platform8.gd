@@ -11,6 +11,7 @@ func _initialize() -> void:
 	_test_director_seeded()
 	await _test_anomalies_revert()
 	await _test_playthrough()
+	await _test_walk()
 	print("FAILED: %d" % _fails if _fails else "ALL TESTS PASSED")
 	quit(1 if _fails else 0)
 
@@ -126,3 +127,62 @@ func _test_playthrough() -> void:
 func _until_ridden(game: Node) -> void:
 	while game._riding:
 		await process_frame
+
+## Real physics walk: hold W (a real key event) and steer along the route to each train door.
+## Proves the gates, passage, escalator and platform doors are walkable.
+const ROUTE := [
+	Vector2(0.75, -14), Vector2(0.75, -18), Vector2(0, -22), Vector2(0, -39),  # concourse, AFC gap, passage
+	Vector2(0, -62), Vector2(0, -85),                                         # escalator, platform
+]
+
+func _test_walk() -> void:
+	var game: Node = load("res://game/scenes/gameplay/Game.tscn").instantiate()
+	root.add_child(game)
+	await process_frame
+	var boards := []
+	game.station.boarded.connect(func(opp): boards.append(opp))
+	# Walk 1: forward train (right door). First loop is empty, so it's the right call.
+	var ok := await _walk(game.player, ROUTE + [Vector2(5.0, -85)])
+	_check(ok and boards == [false], "walk 1 reaches the FORWARD door (boards=%s)" % [boards])
+	_check(game.player.global_position.y < -8.5, "walk 1 got down the escalator")
+	await _finish_ride(game)
+	_check(game.loop.count == 1, "walk 1 counted")
+	# Walk 2: opposite train (left door).
+	ok = await _walk(game.player, ROUTE + [Vector2(-5.0, -85)])
+	_check(ok and boards == [false, true], "walk 2 reaches the OPPOSITE door (boards=%s)" % [boards])
+	await _finish_ride(game)
+	game.free()
+
+func _walk(player: StationPlayer, points: Array) -> bool:
+	_hold_w(true)
+	for p: Vector2 in points:
+		var t := 0.0
+		while player.active:
+			var pos := Vector2(player.global_position.x, player.global_position.z)
+			var d := p - pos
+			if d.length() < 0.35:
+				break
+			player.rotation.y = atan2(-d.x, -d.y)
+			await physics_frame
+			t += 1.0 / Engine.physics_ticks_per_second
+			if t > 12.0:
+				printerr("stuck at %s heading for %s" % [player.global_position, p])
+				_hold_w(false)
+				return false
+		if not player.active:  # boarded a train
+			break
+	_hold_w(false)
+	return not player.active
+
+func _finish_ride(game: Node) -> void:
+	Engine.time_scale = 60.0
+	while game._riding:
+		await process_frame
+	Engine.time_scale = 1.0
+
+func _hold_w(down: bool) -> void:
+	var e := InputEventKey.new()
+	e.physical_keycode = KEY_W
+	e.pressed = down
+	Input.parse_input_event(e)
+	Input.flush_buffered_events()

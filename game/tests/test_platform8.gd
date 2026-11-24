@@ -16,6 +16,7 @@ func _initialize() -> void:
 	await _test_playthrough()
 	await _test_walk()
 	await _test_walk_decisions()
+	await _test_token_machine()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE))
 	print("FAILED: %d" % _fails if _fails else "ALL TESTS PASSED")
 	quit(1 if _fails else 0)
@@ -122,7 +123,7 @@ func _test_anomalies_revert() -> void:
 	root.add_child(game)
 	await process_frame  # _ready() has not run yet inside _initialize
 	var station: Station = game.station
-	_check(AnomalyCatalog.ALL.size() == 27, "27 anomalies in catalog (got %d)" % AnomalyCatalog.ALL.size())
+	_check(AnomalyCatalog.ALL.size() == 28, "28 anomalies in catalog (got %d)" % AnomalyCatalog.ALL.size())
 	var ids := {}
 	var per_category := {}
 	for data: AnomalyData in AnomalyCatalog.ALL:
@@ -294,6 +295,33 @@ func _test_walk_decisions() -> void:
 		var ok := await _walk(game.player, c[1])
 		_check(ok and choices == [c[2]], "%s: %s choice registers (got %s)" % [c[0], "back" if c[2] else "forward", choices])
 		await _finish_ride(game)
+	game.free()
+
+## Token machine: look at it, press E (a real key event), a token drops; arrival empties the tray.
+func _test_token_machine() -> void:
+	var game: Node = _new_game()
+	root.add_child(game)
+	await process_frame
+	var tvm: TokenMachine = game.station.get_node("Props/TokenMachine")
+	game.player.place(Transform3D(Basis(Vector3.UP, PI / 2), Vector3(-8.3, 1.0, -4)))  # facing the machine
+	for i in 3:
+		await physics_frame
+	_check(game.player.interactable() == tvm, "looking at the token machine")
+	await process_frame
+	_check(game.hud("Prompt").text == TokenMachine.PROMPT, "buy prompt shows")
+	var e := InputEventKey.new()
+	e.physical_keycode = KEY_E
+	e.pressed = true
+	Input.parse_input_event(e)
+	await process_frame
+	_check(tvm.tokens.get_child_count() == 1, "E dispenses one token (got %d)" % tvm.tokens.get_child_count())
+	_check(tvm.screen.text.contains(game.loop.station_name.to_upper()), "screen shows this station")
+	game.player.place(game.station.spawn.global_transform)
+	for i in 3:
+		await physics_frame
+	_check(game.player.interactable() == null and game.hud("Prompt").text == "", "no prompt when looking away")
+	game.station.show_station("X", 1, Color.RED, "Y")
+	_check(tvm.tokens.get_child_count() == 0, "arrival empties the tray")
 	game.free()
 
 ## Wrong-call replay: picks the 3 s window around the closest pass, and plays after a wrong call.

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="AnomalyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/AnomalyData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"token_flood"
+display_name = "Token machine won't stop dispensing"
+category = &"object"
+tier = 2
+location = &"concourse"
+script_path = "res://game/scripts/platform8/anomalies/TokenFlood.gd"
+slot_name = NodePath("Props/TokenMachine")

@@ -68,6 +68,7 @@ func show_station(station_name: String, count: int, line_colour: Color, next_nam
 	_number.text = "STATION %d / 8" % count
 	_line_mat.albedo_color = line_colour
 	props.get_node("TrainBoards/Forward").text = "▶  " + next_name.to_upper()
+	props.get_node("TokenMachine").set_route(station_name, next_name)
 
 func set_exit_open(open: bool) -> void:
 	_exit_barrier.use_collision = not open
@@ -318,7 +319,13 @@ func _build_props() -> void:
 	_model("npc_commuter_a", people, "CommuterA", Vector3(-2.2, -ESC_DROP, -80.0), -PI / 2, body)
 	_model("npc_commuter_b", people, "CommuterB", Vector3(2.0, -ESC_DROP, -91.0), PI, body)
 	_model("dustbin", props, "Dustbin", Vector3(8.6, 0, -7), -PI / 2, Vector3(0.6, 0.9, 0.6))
-	_model("token_machine", self, "TokenMachine", Vector3(-9.65, 0, -4), PI / 2, Vector3(0.6, 1.8, 0.8))
+	var tvm := TokenMachine.new()
+	tvm.name = "TokenMachine"
+	tvm.position = Vector3(-9.65, 0, -4)
+	tvm.rotation.y = PI / 2
+	props.add_child(tvm)
+	_model("token_machine", tvm, "Model", Vector3.ZERO, 0.0, Vector3(0.8, 1.8, 0.6))
+	tvm.dim_screen()
 
 	_box(self, Vector3(2.6, 0.32, 0.05), Vector3(0, 2.2, -36.05), DARK, false)
 	var plat := _label(props, "PLATFORM 1 & 2  ↓", Vector3(0, 2.2, -36.0), 0, 36)

@@ -30,4 +30,5 @@ const ALL := [
 	preload("res://game/data/anomalies/rhythm_flicker.tres"),
 	preload("res://game/data/anomalies/staff_door.tres"),
 	preload("res://game/data/anomalies/tactile_colour.tres"),
+	preload("res://game/data/anomalies/token_flood.tres"),
 ]

@@ -21,6 +21,7 @@ var active := true:
 var sensitivity_scale := 1.0  # from the save's settings
 var _walked := 0.0
 var _step := AudioStreamPlayer.new()
+var _look := RayCast3D.new()
 
 func _ready() -> void:
 	add_to_group(&"player")
@@ -30,6 +31,15 @@ func _ready() -> void:
 	_step.bus = Atmosphere.BUS
 	_step.volume_db = -10.0
 	add_child(_step)
+	_look.target_position = Vector3(0, 0, -1.8)  # arm's reach
+	camera.add_child(_look)
+
+## What you're looking at that can be used (has interact()), or null.
+func interactable() -> Node:
+	var n: Node = _look.get_collider() if active else null
+	while n and not n.has_method("interact"):
+		n = n.get_parent()
+	return n
 
 func place(at: Transform3D) -> void:
 	global_transform = at
@@ -43,6 +53,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		rotate_y(-event.relative.x * SENSITIVITY * sensitivity_scale)
 		head.rotation.x = clampf(head.rotation.x - event.relative.y * SENSITIVITY * sensitivity_scale, -1.4, 1.4)
+	elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_E:
+		var thing := interactable()
+		if thing:
+			thing.interact()
 	elif event.is_action_pressed("ui_cancel"):
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	elif event is InputEventMouseButton and event.pressed:

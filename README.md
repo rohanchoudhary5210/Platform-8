@@ -12,6 +12,7 @@ First-person anomaly-spotting game set in a looping underground metro station (f
 | Walk | W A S D or arrow keys |
 | Look | Mouse |
 | Free the mouse | Esc (click to capture it again) |
+| Use (buy a token at the token machine) | E, while looking at it |
 
 ## The rules
 
@@ -57,7 +58,7 @@ Learn this on loop 1. It's what you compare against every time after.
 | Sign over the passage opening | Station name in white capitals, `STATION n / 8` under it (and the same name in the top-left HUD) |
 | Clock, front wall left of the opening | Red second hand going **clockwise** |
 | Yellow tactile strip on the floor, spawn → gates | Yellow all the way |
-| Left wall | Blue token machine by the start, lit cream poster (**red square top-left**, `SAFE TRAVEL →` / `KEEP LEFT` / `MIND THE GAP`), water cooler near the gates with a **dry floor** |
+| Left wall | Blue token machine by the start (screen shows `<this station> → <next>`, **tray empty**; press E to buy a token), lit cream poster (**red square top-left**, `SAFE TRAVEL →` / `KEEP LEFT` / `MIND THE GAP`), water cooler near the gates with a **dry floor** |
 | Right wall | Green `EXIT →` sign (points back towards the real exit behind you), **closed** lift doors, a **green dustbin on this wall** near the start |
 | Ceiling, just before the gates | **Two** CCTV cameras, one each side |
 | AFC gates | Red flaps **closed**; they open only when you walk up to them |
@@ -126,20 +127,21 @@ All of these mean: **take the BACK choice.** Tier sets when they can appear: **S
 | 23 | Train has no destination | Train behind the right door | Destination board is **blank** |
 | 24 | Guard watches you | Concourse, by the gates | The guard **turns to face you** and slowly follows you around the concourse |
 | 25 | Everyone faces one wall | Concourse and platform | The guard, the sweeper and both commuters all stand **facing the right-hand wall** |
+| 26 | Token machine won't stop | Concourse, left wall by the start | Tokens keep **dropping on their own** with a clatter, filling the tray and spilling over the floor |
 
 ### Intense (stations 7 and 8)
 
 | # | Anomaly | Where | Tell |
 |---|---|---|---|
-| 26 | HUD counter jumps | Top-left HUD | The count **flickers to `8 / 8`** every few seconds, then back |
-| 27 | Lights die towards you | Everywhere | Lights switch off **one by one** from the platform end towards you, each with a heavy clunk |
+| 27 | HUD counter jumps | Top-left HUD | The count **flickers to `8 / 8`** every few seconds, then back |
+| 28 | Lights die towards you | Everywhere | Lights switch off **one by one** from the platform end towards you, each with a heavy clunk |
 
 ### No anomaly
 If everything matches the "normal" tables (up to the decision point), take the **forward** choice.
 
 ## Full anomaly list (GDD)
 
-The GDD's 48-anomaly pool plus its train-side extras. ✅ = in the game now (27), ⏳ = planned.
+The GDD's 48-anomaly pool plus its train-side extras. ✅ = in the game now (28), ⏳ = planned.
 
 | GDD # | Anomaly | Category | Tier | Status |
 |---|---|---|---|---|
@@ -165,7 +167,7 @@ The GDD's 48-anomaly pool plus its train-side extras. ✅ = in the game now (27)
 | 20 | Whole crowd faces one wall | NPCs | Creepy | ✅ |
 | 21 | Kid with a balloon has no shadow | NPCs | Creepy | ⏳ needs NPCs |
 | 22 | Sweeper sweeps through the walls | NPCs | Intense | ⏳ needs NPCs |
-| 23 | Token machine won't stop dispensing | Object behaviour | Creepy | ⏳ machine model is in, tokens next |
+| 23 | Token machine won't stop dispensing | Object behaviour | Creepy | ✅ |
 | 24 | AFC gate opens before you reach it | Object behaviour | Subtle | ✅ |
 | 25 | Escalator runs the wrong direction | Object behaviour | Subtle | ✅ |
 | 26 | Water cooler overflows | Object behaviour | Subtle | ✅ |
@@ -254,7 +256,8 @@ Prints `ALL TESTS PASSED`. The tests cover:
 - the loop rules
 - the picker over 300 seeds (first loop empty, never more than 2 empty loops in a row, no category twice in a row, no repeats, no category over 20% of the pool)
 - decision-point unlocks, and that anomalies never sit past the decision point
-- apply/revert for every anomaly
+- apply/revert for every anomaly, and that the guard really follows you
+- the token machine: looking at it shows the prompt, a real E key press drops a token, arrival empties the tray
 - a scripted 8-station run, including the ending screen and what it saves
 - the save file: round-trip, fastest time kept, a save from a newer build ignored
 - the wrong-call replay window

@@ -23,6 +23,18 @@ func _initialize() -> void:
 		for i in 5:
 			await process_frame
 		root.get_viewport().get_texture().get_image().save_png("user://shots/%s.png" % k)
+	# Token machine: normal (prompt showing), then the flood anomaly.
+	game.player.place(Transform3D(Basis(Vector3.UP, PI / 2 - 0.3), Vector3(-7.7, 1.0, -4.8)))
+	game.player.head.rotation.x = -0.35
+	game.player.active = true
+	for i in 10:
+		await process_frame
+	root.get_viewport().get_texture().get_image().save_png("user://shots/token_machine.png")
+	var flood := Anomaly.create(load("res://game/data/anomalies/token_flood.tres"))
+	flood.apply(game.station.get_node("Props/TokenMachine"))
+	await create_timer(6.0).timeout
+	root.get_viewport().get_texture().get_image().save_png("user://shots/token_flood.png")
+	game.player.active = false
 	game.train.ride("Roshanpura", 100.0)
 	for i in 30:
 		await process_frame

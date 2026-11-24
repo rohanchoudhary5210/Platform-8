@@ -28,7 +28,7 @@ Each loop has 0 or 1 anomaly. If you saw **nothing wrong**, take the **forward**
 
 The title screen shows the **Lost & Found** board: one card per anomaly. An anomaly is "found" the first time you call it right, and its card then shows its name and category. The rest stay `? ? ?`. Above the board: best station reached, number of clears and fastest clear.
 
-Everything is in one save file, `%APPDATA%\Godotpp_userdata\Platform 8\platform8_save.cfg`: found anomalies, best station, clears, best time, mouse sensitivity and volume. Delete it to reset. Tests use a separate scratch file, so they never touch it.
+Everything is in one save file, `%APPDATA%\Godot\app_userdata\Platform 8\platform8_save.cfg`: found anomalies, best station, clears, best time, mouse sensitivity and volume. Delete it to reset. Tests use a separate scratch file, so they never touch it.
 
 The **first loop is always clean**, so the first right answer is always forward.
 

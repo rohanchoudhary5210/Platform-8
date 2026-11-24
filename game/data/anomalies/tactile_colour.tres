@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AnomalyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/AnomalyData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"tactile_colour"
+display_name = "Floor strip changes colour"
+category = &"small_visual"
+tier = 1
+location = &"concourse"
+script_path = "res://game/scripts/platform8/anomalies/SetProperty.gd"
+slot_name = NodePath("Props/TactileStrip/Stretch/S0")
+params = {"property": "material:albedo_color", "value": Color(0.15, 0.35, 0.85, 1)}

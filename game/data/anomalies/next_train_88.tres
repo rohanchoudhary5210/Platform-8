@@ -6,9 +6,9 @@
 script = ExtResource("1_data")
 id = &"next_train_88"
 display_name = "Next train: 88 min"
-category = &"signage"
+category = &"time"
 tier = 1
-solo_ok = true
-visible_on = &"platform"
-script_path = "res://game/scripts/platform8/anomalies/NextTrain88.gd"
+location = &"escalator"
+script_path = "res://game/scripts/platform8/anomalies/SetProperty.gd"
 slot_name = NodePath("Props/NextTrainBoard")
+params = {"property": "text", "value": "NEXT TRAIN  88 MIN"}

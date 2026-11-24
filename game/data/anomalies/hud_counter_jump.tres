@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AnomalyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/AnomalyData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"hud_counter_jump"
+display_name = "HUD counter jumps to 8"
+category = &"meta_ui"
+tier = 3
+location = &"concourse"
+script_path = "res://game/scripts/platform8/anomalies/HudCounterJump.gd"
+slot_name = NodePath("../HUD/Station")
+

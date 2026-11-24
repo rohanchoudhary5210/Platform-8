@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AnomalyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/AnomalyData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"rhythm_flicker"
+display_name = "Tube light flickers in a rhythm"
+category = &"lighting"
+tier = 1
+location = &"passage"
+script_path = "res://game/scripts/platform8/anomalies/RhythmFlicker.gd"
+slot_name = NodePath("Lights/L2")
+

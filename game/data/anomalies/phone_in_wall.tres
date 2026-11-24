@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AnomalyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/AnomalyData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"phone_in_wall"
+display_name = "A phone rings inside the wall"
+category = &"audio"
+tier = 2
+location = &"passage"
+script_path = "res://game/scripts/platform8/anomalies/PhoneInWall.gd"
+slot_name = NodePath("Props/PhoneSpot")
+

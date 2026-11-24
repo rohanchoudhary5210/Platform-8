@@ -19,9 +19,9 @@ var count := 0
 var station_name: String = STATION_NAMES[0]
 var current: AnomalyData = null
 
-## took_opposite: true if the player boarded the opposite train. Returns whether it was right.
-func resolve(took_opposite: bool) -> bool:
-	var correct := took_opposite == (current != null)
+## took_back: true if the player took the back choice (opposite train, up the escalator, back from the gates).
+func resolve(took_back: bool) -> bool:
+	var correct := took_back == (current != null)
 	if correct:
 		count += 1
 		station_name = STATION_NAMES[count]
@@ -34,3 +34,22 @@ func line_colour() -> Color:
 
 func is_complete() -> bool:
 	return count >= GOAL
+
+## Decision points and the station count they unlock at (GDD). Passage junction (5) isn't built yet.
+const DECISIONS := {&"train": 0, &"escalator": 2, &"gates": 3}
+## Furthest AnomalyData.ROUTE index the player passes before reaching each decision point.
+const DECISION_REACH := {&"train": 3, &"escalator": 2, &"gates": 0}
+
+var decision: StringName = &"train"
+var _rng := RandomNumberGenerator.new()
+
+func seed_decisions(s: int) -> void:
+	_rng.seed = s
+
+func pick_decision() -> StringName:
+	var open := DECISIONS.keys().filter(func(k): return count >= DECISIONS[k])
+	decision = open[_rng.randi_range(0, open.size() - 1)]
+	return decision
+
+func next_station_name() -> String:
+	return STATION_NAMES[mini(count + 1, GOAL)]

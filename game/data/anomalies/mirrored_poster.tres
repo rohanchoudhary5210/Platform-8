@@ -5,10 +5,10 @@
 [resource]
 script = ExtResource("1_data")
 id = &"mirrored_poster"
-display_name = "Mirrored poster"
-category = &"poster"
+display_name = "Ad poster is mirrored"
+category = &"small_visual"
 tier = 1
-solo_ok = true
-visible_on = &"concourse"
-script_path = "res://game/scripts/platform8/anomalies/MirroredPoster.gd"
+location = &"concourse"
+script_path = "res://game/scripts/platform8/anomalies/SetProperty.gd"
 slot_name = NodePath("Props/Poster")
+params = {"property": "scale:x", "value": -1.0}

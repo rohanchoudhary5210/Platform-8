@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AnomalyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/AnomalyData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"dustbin_moved"
+display_name = "Dustbin on the other wall"
+category = &"small_visual"
+tier = 1
+location = &"concourse"
+script_path = "res://game/scripts/platform8/anomalies/SetProperty.gd"
+slot_name = NodePath("Props/Dustbin")
+params = {"property": "position:x", "value": -8.6}

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AnomalyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/AnomalyData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"low_ceiling"
+display_name = "Passage ceiling is lower"
+category = &"spatial"
+tier = 2
+location = &"passage"
+script_path = "res://game/scripts/platform8/anomalies/LowCeiling.gd"
+slot_name = NodePath(".")
+

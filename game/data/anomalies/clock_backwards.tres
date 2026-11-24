@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AnomalyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/AnomalyData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"clock_backwards"
+display_name = "Clock runs backwards"
+category = &"time"
+tier = 1
+location = &"concourse"
+script_path = "res://game/scripts/platform8/anomalies/SetProperty.gd"
+slot_name = NodePath("Props/Clock")
+params = {"property": "metadata/dir", "value": -1.0}

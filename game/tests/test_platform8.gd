@@ -9,9 +9,11 @@ func _initialize() -> void:
 	_test_loop_manager()
 	_test_director_rules()
 	_test_director_seeded()
+	_test_decisions()
 	await _test_anomalies_revert()
 	await _test_playthrough()
 	await _test_walk()
+	await _test_walk_decisions()
 	print("FAILED: %d" % _fails if _fails else "ALL TESTS PASSED")
 	quit(1 if _fails else 0)
 
@@ -44,7 +46,10 @@ func _test_director_rules() -> void:
 		var last_cat := &""
 		var since_reset := {}
 		for loop_i in 60:
+			var seen_before := d.seen.size()
 			var a := d.pick(loop_i % 9)
+			if d.seen.size() < seen_before + (1 if a else 0):  # pool ran dry and was recycled (shortcut in AnomalyDirector)
+				since_reset.clear()
 			if loop_i == 0:
 				_check(a == null, "seed %d: first loop is empty" % seed_i)
 			if a == null:
@@ -54,10 +59,7 @@ func _test_director_rules() -> void:
 			streak = 0
 			_check(a.category != last_cat, "seed %d: category %s twice in a row" % [seed_i, a.category])
 			last_cat = a.category
-			if since_reset.has(a.id):
-				# Only allowed once the pool is exhausted (shortcut in AnomalyDirector).
-				_check(d.seen.size() <= 1, "seed %d: %s repeated before pool ran dry" % [seed_i, a.id])
-				since_reset.clear()
+			_check(not since_reset.has(a.id), "seed %d: %s repeated before pool ran dry" % [seed_i, a.id])
 			since_reset[a.id] = true
 	# Empty ratio ~30% (GDD); the streak cap and pool exhaustion pull it around a little.
 	var empties := 0
@@ -80,24 +82,58 @@ func _test_director_seeded() -> void:
 		_check((x.id if x else &"") == (y.id if y else &""), "same seed gives same run")
 	_check(AnomalyDirector.tier_for(3) == 1 and AnomalyDirector.tier_for(4) == 2 and AnomalyDirector.tier_for(7) == 3, "tiers")
 
+## Week 2 "done when" (part 2): every anomaly's apply() changes the station and revert() restores it exactly.
 func _test_anomalies_revert() -> void:
-	var station: Station = load("res://game/scenes/gameplay/Station.tscn").instantiate()
-	root.add_child(station)
+	var game: Node = load("res://game/scenes/gameplay/Game.tscn").instantiate()
+	root.add_child(game)
 	await process_frame  # _ready() has not run yet inside _initialize
-	station.show_station("Test Nagar", 3, Color.RED)
-	_check(AnomalyCatalog.ALL.size() == 5, "5 anomalies in catalog")
+	var station: Station = game.station
+	_check(AnomalyCatalog.ALL.size() == 25, "25 anomalies in catalog (got %d)" % AnomalyCatalog.ALL.size())
+	var ids := {}
+	var per_category := {}
 	for data: AnomalyData in AnomalyCatalog.ALL:
+		_check(not ids.has(data.id), "%s: duplicate id" % data.id)
+		ids[data.id] = true
+		per_category[data.category] = per_category.get(data.category, 0) + 1
+		_check(data.route_index() >= 0, "%s: unknown location %s" % [data.id, data.location])
 		var slot := station.get_node_or_null(data.slot_name)
 		_check(slot != null, "%s: slot %s exists" % [data.id, data.slot_name])
 		if slot == null:
 			continue
 		var before := station.snapshot()
-		var anomaly: Anomaly = load(data.script_path).new()
+		var anomaly := Anomaly.create(data)
 		anomaly.apply(slot)
 		_check(station.snapshot() != before, "%s: apply() changes the station" % data.id)
 		anomaly.revert(slot)
-		_check(station.snapshot() == before, "%s: revert() restores the station" % data.id)
-	station.free()
+		var after := station.snapshot()
+		_check(after == before, "%s: revert() restores the station" % data.id)
+		if after != before:
+			for k in before:
+				if after.get(k) != before[k]:
+					printerr("   %s: %s -> %s" % [k, before[k], after.get(k)])
+	for c in per_category:
+		_check(per_category[c] <= ceili(AnomalyCatalog.ALL.size() * 0.2), "category %s over 20%% of the pool" % c)
+	game.free()
+
+func _test_decisions() -> void:
+	var lm := LoopManager.new()
+	lm.seed_decisions(7)
+	for c in 9:
+		lm.count = c
+		var seen := {}
+		for i in 200:
+			var dp := lm.pick_decision()
+			seen[dp] = true
+			_check(c >= LoopManager.DECISIONS[dp], "station %d: %s used before it unlocks" % [c, dp])
+		var expect := LoopManager.DECISIONS.keys().filter(func(k): return c >= LoopManager.DECISIONS[k]).size()
+		_check(seen.size() == expect, "station %d: %d decision points in use, expected %d" % [c, seen.size(), expect])
+	# Fairness: an anomaly is only picked if the player passes it before the decision point.
+	for seed_i in range(1, 101):
+		var d := AnomalyDirector.new(AnomalyCatalog.ALL, seed_i)
+		for i in 30:
+			var reach: int = [0, 2, 3][i % 3]
+			var a := d.pick(i % 9, reach)
+			_check(a == null or a.route_index() <= reach, "seed %d: %s picked past its decision point" % [seed_i, a.id if a else &""])
 
 ## Week 1 "done when": a wrong train returns you to the same station; 8 right calls open the exit.
 func _test_playthrough() -> void:
@@ -106,7 +142,7 @@ func _test_playthrough() -> void:
 	root.add_child(game)
 	await process_frame
 	var first_station: String = game.loop.station_name
-	game.station.boarded.emit(true)  # first loop is always empty, so opposite is wrong
+	game.station.decided.emit(true)  # first loop is always empty, so opposite is wrong
 	await _until_ridden(game)
 	_check(game.loop.count == 0 and game.loop.station_name == first_station, "wrong train: same station, count 0")
 	var guard := 0
@@ -115,7 +151,7 @@ func _test_playthrough() -> void:
 		var anomaly: AnomalyData = game.loop.current
 		if anomaly:
 			_check(game.station.get_node(anomaly.slot_name) != null, "active anomaly slot present")
-		game.station.boarded.emit(anomaly != null)
+		game.station.decided.emit(anomaly != null)
 		await _until_ridden(game)
 	_check(game.loop.is_complete(), "cleared 8 stations")
 	_check(not game.station._exit_barrier.visible, "exit opens at station 8")
@@ -140,7 +176,7 @@ func _test_walk() -> void:
 	root.add_child(game)
 	await process_frame
 	var boards := []
-	game.station.boarded.connect(func(opp): boards.append(opp))
+	game.station.decided.connect(func(opp): boards.append(opp))
 	# Walk 1: forward train (right door). First loop is empty, so it's the right call.
 	var ok := await _walk(game.player, ROUTE + [Vector2(5.0, -85)])
 	_check(ok and boards == [false], "walk 1 reaches the FORWARD door (boards=%s)" % [boards])
@@ -186,3 +222,26 @@ func _hold_w(down: bool) -> void:
 	e.pressed = down
 	Input.parse_input_event(e)
 	Input.flush_buffered_events()
+
+## Real physics walks for the escalator and gate decision points, both choices each.
+func _test_walk_decisions() -> void:
+	var game: Node = load("res://game/scenes/gameplay/Game.tscn").instantiate()
+	root.add_child(game)
+	await process_frame
+	var choices := []
+	game.station.decided.connect(func(back): choices.append(back))
+	var cases := [
+		[&"gates", [Vector2(0.75, -14.6), Vector2(0.75, -8)], true],                 # turn back from the gates
+		[&"gates", [Vector2(0.75, -14.6), Vector2(0.75, -19.5)], false],             # tap through
+		[&"escalator", ROUTE.slice(0, 5) + [Vector2(0, -50)], true],                  # ride back up
+		[&"escalator", ROUTE.slice(0, 5) + [Vector2(0, -67)], false],                 # walk on to the platform
+	]
+	for c in cases:
+		choices.clear()
+		game.loop.decision = c[0]
+		game.station.set_decision(c[0])
+		game.player.place(game.station.spawn.global_transform)
+		var ok := await _walk(game.player, c[1])
+		_check(ok and choices == [c[2]], "%s: %s choice registers (got %s)" % [c[0], "back" if c[2] else "forward", choices])
+		await _finish_ride(game)
+	game.free()

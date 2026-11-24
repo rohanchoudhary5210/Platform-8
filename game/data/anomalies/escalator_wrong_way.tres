@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AnomalyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/AnomalyData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"escalator_wrong_way"
+display_name = "Escalator runs the wrong way"
+category = &"object"
+tier = 1
+location = &"escalator"
+script_path = "res://game/scripts/platform8/anomalies/SetProperty.gd"
+slot_name = NodePath("Props/EscalatorSteps")
+params = {"property": "metadata/speed", "value": -0.6}

@@ -22,6 +22,7 @@ var _walked := 0.0
 var _step := AudioStreamPlayer.new()
 
 func _ready() -> void:
+	add_to_group(&"player")
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	camera.fov = 68.0
 	_step.stream = SynthAudio.footstep()

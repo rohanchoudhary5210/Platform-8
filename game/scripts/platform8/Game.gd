@@ -1,10 +1,16 @@
 extends Node3D
 
-## Composition root for a run: station loop → train choice → ride → next loop.
+## Composition root for a run: station loop → decision point → ride / transition → next loop.
 
 const RIDE_MIN := 10.0
 const RIDE_MAX := 15.0
-const PA_SECONDS := 5.0
+const TRANSITION_SECONDS := 4.0  # escalator ride / dark passage after a non-train choice
+const PA_SECONDS := 6.0
+const DECISION_HINTS := {
+	&"train": "DECISION: TRAIN   ·   nothing wrong → FORWARD (right)   ·   anomaly → OPPOSITE (left)",
+	&"escalator": "DECISION: ESCALATOR BOTTOM   ·   nothing wrong → walk on to the platform   ·   anomaly → ride back up",
+	&"gates": "DECISION: AFC GATES   ·   nothing wrong → go through   ·   anomaly → turn back",
+}
 
 @onready var station: Station = $Station
 @onready var train: TrainInterior = $TrainInterior
@@ -19,9 +25,8 @@ var _riding := false
 var _ended := false
 var _game: GameManager
 var _logger: Node
-var _hud_station: Label
-var _hud_pa: Label
-var _hud_end: Label
+var _hud: CanvasLayer
+var _fade: ColorRect
 
 ## Auto-wired by SceneManager after the scene loads.
 func inject_services(registry: Node) -> void:
@@ -33,38 +38,55 @@ func inject_services(registry: Node) -> void:
 	_log("Run started", {"seed": director.seed_value})
 
 func _ready() -> void:
+	loop.seed_decisions(director.seed_value + 1)
 	_build_hud()
-	station.boarded.connect(_on_boarded)
+	station.decided.connect(_on_decided)
 	station.exit_reached.connect(_on_exit)
 	_start_loop("")
+
+func hud(label: String) -> Label:
+	return _hud.get_node(label)
 
 func _start_loop(pa: String) -> void:
 	if _active:
 		_active.revert(station.get_node(loop.current.slot_name))
 		_active = null
-	station.show_station(loop.station_name, loop.count, loop.line_colour())
-	station.set_exit_open(loop.is_complete())
-	loop.current = null if loop.is_complete() else director.pick(loop.count)
+	var done := loop.is_complete()
+	station.show_station(loop.station_name, loop.count, loop.line_colour(), loop.next_station_name())
+	station.set_exit_open(done)
+	var dp: StringName = &"none" if done else loop.pick_decision()
+	station.set_decision(dp)
+	hud("Station").text = "%s   ·   %d / %d" % [loop.station_name.to_upper(), loop.count, LoopManager.GOAL]
+	hud("Decision").text = DECISION_HINTS.get(dp, "EXIT IS OPEN   ·   turn around")
+	_say(pa if not pa.is_empty() else "Yeh %s station hai.  This is %s." % [loop.station_name, loop.station_name])
+	# Anomaly last, so it can change what the HUD and PA just showed.
+	loop.current = null if done else director.pick(loop.count, LoopManager.DECISION_REACH[dp])
 	if loop.current:
-		_active = load(loop.current.script_path).new()
+		_active = Anomaly.create(loop.current)
 		_active.apply(station.get_node(loop.current.slot_name))
-	_log("Loop", {"count": loop.count, "anomaly": loop.current.id if loop.current else "none"})
+	_log("Loop", {"count": loop.count, "decision": dp, "anomaly": loop.current.id if loop.current else "none"})
 	player.place(station.spawn.global_transform)
 	player.active = true
-	_hud_station.text = "%s   ·   %d / %d" % [loop.station_name.to_upper(), loop.count, LoopManager.GOAL]
-	_say(pa)
+	create_tween().tween_property(_fade, "color:a", 0.0, 0.8)
 
-func _on_boarded(took_opposite: bool) -> void:
+func _on_decided(took_back: bool) -> void:
 	if _riding or loop.is_complete():
 		return
 	_riding = true
 	player.active = false
+	var dp := loop.decision
 	var anomaly := loop.current
-	var correct := loop.resolve(took_opposite)
+	var correct := loop.resolve(took_back)
 	if correct and anomaly:
 		director.mark_found(anomaly.id)
 	atmosphere.riding = true
-	await train.ride(loop.station_name, randf_range(RIDE_MIN, RIDE_MAX))
+	if dp == &"train":
+		await train.ride(loop.station_name, randf_range(RIDE_MIN, RIDE_MAX))
+	else:
+		var t := create_tween()
+		t.tween_property(_fade, "color:a", 1.0, 0.8)
+		t.tween_interval(TRANSITION_SECONDS)
+		await t.finished
 	atmosphere.riding = false
 	_riding = false
 	var pa := "" if correct else "Yeh station %s hai." % loop.station_name
@@ -78,42 +100,52 @@ func _on_exit() -> void:
 	_ended = true
 	player.active = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	_hud_end.text = "You made it out.\n\nseed %d" % director.seed_value
-	_hud_end.visible = true
+	hud("End").text = "You made it out.\n\nseed %d" % director.seed_value
+	hud("End").visible = true
 	if _game:
 		_game.game_over("escaped")
 
 func _say(text: String) -> void:
-	_hud_pa.text = text
+	var pa := hud("PA")
+	pa.text = text
 	if text.is_empty():
 		return
 	atmosphere.chime()
 	await get_tree().create_timer(PA_SECONDS).timeout
-	if _hud_pa.text == text:
-		_hud_pa.text = ""
+	if pa.text == text:
+		pa.text = ""
 
 func _log(msg: String, ctx: Dictionary) -> void:
 	if _logger:
 		_logger.info(msg, ctx)
 
 func _build_hud() -> void:
-	var hud := CanvasLayer.new()
-	add_child(hud)
-	_hud_station = Label.new()
-	_hud_station.position = Vector2(24, 18)
-	_hud_station.add_theme_font_size_override("font_size", 20)
-	hud.add_child(_hud_station)
-	_hud_pa = Label.new()
-	_hud_pa.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
-	_hud_pa.offset_top = -90
-	_hud_pa.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_hud_pa.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_hud_pa.add_theme_font_size_override("font_size", 26)
-	hud.add_child(_hud_pa)
-	_hud_end = Label.new()
-	_hud_end.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_hud_end.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_hud_end.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_hud_end.add_theme_font_size_override("font_size", 40)
-	_hud_end.visible = false
-	hud.add_child(_hud_end)
+	_hud = CanvasLayer.new()
+	_hud.name = "HUD"
+	add_child(_hud)
+	_fade = ColorRect.new()
+	_fade.name = "Fade"
+	_fade.color = Color(0, 0, 0, 0)
+	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_hud.add_child(_fade)
+	_label("Station", 20, Control.PRESET_TOP_LEFT, Vector2(24, 18))
+	_label("Decision", 16, Control.PRESET_CENTER_TOP, Vector2(0, 18))
+	_label("PA", 26, Control.PRESET_CENTER_BOTTOM, Vector2(0, -110))
+	_label("Caption", 20, Control.PRESET_CENTER_BOTTOM, Vector2(0, -50))
+	var end := _label("End", 40, Control.PRESET_FULL_RECT, Vector2.ZERO)
+	end.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	end.visible = false
+
+func _label(n: String, size: int, preset: Control.LayoutPreset, offset: Vector2) -> Label:
+	var l := Label.new()
+	l.name = n
+	l.add_theme_font_size_override("font_size", size)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.set_anchors_and_offsets_preset(preset)
+	l.grow_horizontal = Control.GROW_DIRECTION_END if preset == Control.PRESET_TOP_LEFT else Control.GROW_DIRECTION_BOTH
+	l.position += offset
+	if preset == Control.PRESET_TOP_LEFT:
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_hud.add_child(l)
+	return l

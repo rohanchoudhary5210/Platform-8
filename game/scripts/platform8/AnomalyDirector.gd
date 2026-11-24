@@ -28,11 +28,12 @@ static func tier_for(count: int) -> int:
 		return 1
 	return 2 if count <= 6 else 3
 
-func pick(count: int) -> AnomalyData:
+## max_location: furthest ROUTE index the player passes before this loop's decision point.
+func pick(count: int, max_location: int = AnomalyData.ROUTE.size() - 1) -> AnomalyData:
 	_picks += 1
 	if _picks == 1:
 		return _empty()
-	var candidates := _candidates(count)
+	var candidates := _candidates(count, max_location)
 	var must_fill := _empty_streak >= MAX_EMPTY_STREAK
 	if candidates.is_empty() or (not must_fill and _rng.randf() < EMPTY_CHANCE):
 		return _empty()
@@ -49,18 +50,18 @@ func _empty() -> AnomalyData:
 	_empty_streak += 1
 	return null
 
-func _candidates(count: int) -> Array:
-	var c := _filter(count)
+func _candidates(count: int, max_location: int) -> Array:
+	var c := _filter(count, max_location)
 	if c.is_empty():
 		# shortcut: recycles seen anomalies once the pool runs dry; rare once the pool is ~50 (Week 2+).
 		seen.clear()
-		c = _filter(count)
+		c = _filter(count, max_location)
 	return c
 
-func _filter(count: int) -> Array:
+func _filter(count: int, max_location: int) -> Array:
 	var tier := tier_for(count)
 	var ok := func(a: AnomalyData) -> bool:
-		return not seen.has(a.id) and a.category != _last_category and a.solo_ok
+		return not seen.has(a.id) and a.category != _last_category and a.solo_ok and a.route_index() <= max_location
 	var exact := _pool.filter(func(a): return a.tier == tier and ok.call(a))
 	if not exact.is_empty():
 		return exact

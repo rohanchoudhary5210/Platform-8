@@ -5,10 +5,10 @@
 [resource]
 script = ExtResource("1_data")
 id = &"backwards_name"
-display_name = "Backwards station name"
+display_name = "Station name is backwards"
 category = &"signage"
 tier = 1
-solo_ok = true
-visible_on = &"concourse"
+location = &"concourse"
 script_path = "res://game/scripts/platform8/anomalies/BackwardsName.gd"
 slot_name = NodePath("Props/Signs")
+

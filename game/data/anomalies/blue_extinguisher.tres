@@ -5,10 +5,10 @@
 [resource]
 script = ExtResource("1_data")
 id = &"blue_extinguisher"
-display_name = "Blue fire extinguisher"
-category = &"object"
+display_name = "Fire extinguisher is blue"
+category = &"small_visual"
 tier = 1
-solo_ok = true
-visible_on = &"passage"
-script_path = "res://game/scripts/platform8/anomalies/BlueExtinguisher.gd"
-slot_name = NodePath("Props/FireExtinguisher")
+location = &"passage"
+script_path = "res://game/scripts/platform8/anomalies/SetProperty.gd"
+slot_name = NodePath("Props/FireExtinguisher/fire_extinguisher/Body")
+params = {"property": "material_override:albedo_color", "value": Color(0.1, 0.3, 0.9, 1)}

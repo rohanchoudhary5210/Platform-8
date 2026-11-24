@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AnomalyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/AnomalyData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"mind_the_gap_long"
+display_name = "Mind the gap sticker too long"
+category = &"signage"
+tier = 2
+location = &"platform"
+script_path = "res://game/scripts/platform8/anomalies/SetProperty.gd"
+slot_name = NodePath("Props/MindTheGap")
+params = {"property": "scale:x", "value": 4.0}

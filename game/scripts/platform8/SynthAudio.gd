@@ -49,3 +49,13 @@ static func chime() -> AudioStreamWAV:
 		var f := 659.0 if t < 0.55 else 523.0
 		var local := t if t < 0.55 else t - 0.55
 		return 0.5 * sin(TAU * f * t) * exp(-local * 3.5))
+
+## Old landline ring: two short bursts, then silence. Loops.
+static func ring() -> AudioStreamWAV:
+	return make(3.0, func(t: float):
+		var on := fmod(t, 0.6) < 0.4 and t < 1.2
+		return 0.4 * (sin(TAU * 440 * t) + sin(TAU * 480 * t)) * (1.0 if on else 0.0), true)
+
+## Heavy breaker clunk.
+static func clunk() -> AudioStreamWAV:
+	return make(0.5, func(t: float): return (0.8 * sin(TAU * 55 * t) + randf_range(-0.3, 0.3)) * exp(-t * 12.0))

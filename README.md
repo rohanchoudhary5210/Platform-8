@@ -21,7 +21,14 @@ Each loop has 0 or 1 anomaly. If you saw **nothing wrong**, take the **forward**
 
 - Right call: station count +1 and you arrive at the next station (new name, number and line colour).
 - Wrong call: count goes back to 0, you come back to the **same** station, and the PA says *"Yeh station [name] hai."*
-- Reach **8 / 8**: the exit behind the starting point opens. Turn around and walk through it to finish.
+- After a **wrong call** you first see a 3-second **replay** of the loop from your own eyes, around the moment you were closest to the anomaly, with it circled in red. If the loop was clean it says *"There was no anomaly."*
+- Reach **8 / 8**: the exit behind the starting point opens. Turn around, walk up the exit corridor and out onto the street. The ending screen shows your time, wrong calls, anomalies found and the seed. Press Enter to go back to the title.
+
+## Lost & Found and the save file
+
+The title screen shows the **Lost & Found** board: one card per anomaly. An anomaly is "found" the first time you call it right, and its card then shows its name and category. The rest stay `? ? ?`. Above the board: best station reached, number of clears and fastest clear.
+
+Everything is in one save file, `%APPDATA%\Godotpp_userdata\Platform 8\platform8_save.cfg`: found anomalies, best station, clears, best time, mouse sensitivity and volume. Delete it to reset. Tests use a separate scratch file, so they never touch it.
 
 The **first loop is always clean**, so the first right answer is always forward.
 
@@ -200,6 +207,10 @@ The station's models are built in Blender by [`art/build_props.py`](art/build_pr
 - pillar
 - lift doors
 - token vending machine
+- metro coach (outside, with doors, windows and line-colour stripes)
+- coach interior (benches, poles, grab handles, window band) for the train ride
+
+Wall, floor, ceiling and track-pit textures come from [`art/build_textures.py`](art/build_textures.py) (cream ceramic tiles, speckled granite floor, metal ceiling slats, concrete). They are mapped world-space, so every wall gets tiles at the right size without UVs.
 
 To change a prop, edit the script and rerun it with Blender. It overwrites the `.gltf` files, [`art/platform8_props.blend`](art/platform8_props.blend) and [`art/preview.png`](art/preview.png):
 
@@ -239,7 +250,9 @@ Prints `ALL TESTS PASSED`. The tests cover:
 - the picker over 300 seeds (first loop empty, never more than 2 empty loops in a row, no category twice in a row, no repeats, no category over 20% of the pool)
 - decision-point unlocks, and that anomalies never sit past the decision point
 - apply/revert for every anomaly
-- a scripted 8-station run
+- a scripted 8-station run, including the ending screen and what it saves
+- the save file: round-trip, fastest time kept, a save from a newer build ignored
+- the wrong-call replay window
 - physics walks for both choices at the train, the escalator and the gates
 
 ## Adding an anomaly

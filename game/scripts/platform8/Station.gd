@@ -150,9 +150,7 @@ func _build_concourse() -> void:
 	_box(g, Vector3(8.5, 4.5, 0.5), Vector3(5.75, 2, 0.25), WALL)
 	_exit_barrier = _box(g, Vector3(3, 4.5, 0.5), Vector3(0, 2, 0.25), DARK)
 	_exit_label = _label(g, "EXIT CLOSED", Vector3(0, 2.9, -0.05), PI, 64)
-	_box(g, Vector3(3, 0.5, 3), Vector3(0, -0.25, 1.5), FLOOR)
-	var exit_area := _area(g, Vector3(3, 2, 1), Vector3(0, 1, 2))
-	exit_area.body_entered.connect(func(b): if b is StationPlayer: exit_reached.emit())
+	_build_street()
 	# Front wall with the passage opening.
 	_box(g, Vector3(8, 4.5, 0.5), Vector3(-6, 2, -20.25), WALL)
 	_box(g, Vector3(8, 4.5, 0.5), Vector3(6, 2, -20.25), WALL)
@@ -175,6 +173,49 @@ func _build_concourse() -> void:
 	spawn.name = "Spawn"
 	spawn.position = Vector3(0, 1.0, -3)
 	add_child(spawn)
+
+## Behind the exit gate: a corridor out to a night street. Its lights are not in Lights/, so anomalies leave it alone.
+func _build_street() -> void:
+	var g := _node("Street", self)
+	_box(g, Vector3(3, 0.5, 10), Vector3(0, -0.25, 5.5), FLOOR)
+	_box(g, Vector3(3, 0.5, 10), Vector3(0, 3.25, 5.5), CEILING)
+	for x in [-1.75, 1.75]:
+		_box(g, Vector3(0.5, 3.5, 10), Vector3(x, 1.5, 5.5), WALL)
+	var tube := OmniLight3D.new()
+	tube.position = Vector3(0, 2.7, 6)
+	tube.omni_range = 6
+	tube.light_color = LIGHT_COLOUR
+	g.add_child(tube)
+	_label(g, "EXIT 8  ▶  STREET", Vector3(0, 2.6, 0.6), PI, 40).modulate = Color(0.4, 1.0, 0.5)
+	# The street: road, footpath, a sodium lamp, dark buildings with a few lit windows.
+	_box(g, Vector3(40, 0.5, 30), Vector3(0, -0.35, 25), Color(0.08, 0.08, 0.09))
+	_box(g, Vector3(40, 0.15, 3), Vector3(0, -0.02, 12), Color(0.3, 0.3, 0.3))
+	_box(g, Vector3(0.15, 5, 0.15), Vector3(3.5, 2.5, 12.5), DARK)
+	_box(g, Vector3(1.2, 0.12, 0.3), Vector3(3.0, 5.0, 12.5), DARK, false)
+	var lamp := OmniLight3D.new()
+	lamp.position = Vector3(2.6, 4.8, 12.5)
+	lamp.omni_range = 16
+	lamp.light_energy = 2.0
+	lamp.light_color = Color(1.0, 0.62, 0.25)
+	g.add_child(lamp)
+	var night := OmniLight3D.new()  # dim city glow so the buildings read against the sky
+	night.position = Vector3(0, 7, 20)
+	night.omni_range = 30
+	night.light_energy = 0.7
+	night.light_color = Color(0.55, 0.6, 0.85)
+	g.add_child(night)
+	var glow := StandardMaterial3D.new()
+	glow.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	glow.albedo_color = Color(1.0, 0.75, 0.4)
+	for i in 6:
+		var x := -16.0 + i * 6.5
+		var h := 8.0 + (i * 5 % 7)
+		_box(g, Vector3(5.5, h, 4), Vector3(x, h / 2.0, 30), Color(0.22, 0.21, 0.2), false)
+		for j in 3:
+			var w := _box(g, Vector3(0.8, 0.9, 0.05), Vector3(x - 1.5 + j * 1.5, 2.5 + (i + j) % 3 * 2.2, 27.97), Color.WHITE, false)
+			w.material = glow
+	var out := _area(g, Vector3(6, 2, 1), Vector3(0, 1, 12))
+	out.body_entered.connect(func(b): if b is StationPlayer: exit_reached.emit())
 
 func _build_passage() -> void:
 	var g := _node("Passage", self)

@@ -6,6 +6,7 @@ const RIDE_MIN := 10.0
 const RIDE_MAX := 15.0
 const TRANSITION_SECONDS := 4.0  # escalator ride / dark passage after a non-train choice
 const PA_SECONDS := 6.0
+const HOME_SCENE := "res://game/scenes/Home/Home.tscn"
 const DECISION_HINTS := {
 	&"train": "DECISION: TRAIN   ·   nothing wrong → FORWARD (right)   ·   anomaly → OPPOSITE (left)",
 	&"escalator": "DECISION: ESCALATOR BOTTOM   ·   nothing wrong → walk on to the platform   ·   anomaly → ride back up",
@@ -20,12 +21,19 @@ const DECISION_HINTS := {
 var loop := LoopManager.new()
 var director := AnomalyDirector.new(AnomalyCatalog.ALL)
 var replay := Replay.new()
+var save: SaveData
+## Tests point this at a scratch file so they never touch the player's save.
+var save_path := SaveData.PATH
 
 var _active: Anomaly
 var _riding := false
 var _ended := false
 var _game: GameManager
 var _logger: Node
+var _scene: SceneManager
+var _run_time := 0.0
+var _wrong_calls := 0
+var _found_this_run := 0
 var _hud: CanvasLayer
 var _fade: ColorRect
 
@@ -33,6 +41,7 @@ var _fade: ColorRect
 func inject_services(registry: Node) -> void:
 	_game = registry.get_service(&"game") as GameManager
 	_logger = registry.get_service(&"logger")
+	_scene = registry.get_service(&"scene") as SceneManager
 	if _game:
 		_game.reset()
 		_game.start()
@@ -40,11 +49,22 @@ func inject_services(registry: Node) -> void:
 
 func _ready() -> void:
 	loop.seed_decisions(director.seed_value + 1)
+	save = SaveData.open(save_path)
+	player.sensitivity_scale = save.mouse_sensitivity
+	AudioServer.set_bus_volume_db(0, save.volume_db)
 	_build_hud()
 	add_child(replay)
 	station.decided.connect(_on_decided)
 	station.exit_reached.connect(_on_exit)
 	_start_loop("")
+
+func _process(delta: float) -> void:
+	if not _ended:
+		_run_time += delta
+
+func _unhandled_input(event: InputEvent) -> void:
+	if _ended and event.is_action_pressed("ui_accept") and _scene:
+		_scene.go_to(HOME_SCENE)
 
 func _physics_process(delta: float) -> void:
 	if player.active:
@@ -86,6 +106,12 @@ func _on_decided(took_back: bool) -> void:
 	var correct := loop.resolve(took_back)
 	if correct and anomaly:
 		director.mark_found(anomaly.id)
+		save.found[String(anomaly.id)] = true
+		_found_this_run += 1
+	if not correct:
+		_wrong_calls += 1
+	save.best_station = maxi(save.best_station, loop.count)
+	save.write()
 	if not correct:
 		await replay.play(anomaly, station.get_node_or_null(anomaly.slot_name) if anomaly else null, player.camera.fov)
 	atmosphere.riding = true
@@ -108,11 +134,25 @@ func _on_exit() -> void:
 		return
 	_ended = true
 	player.active = false
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	hud("End").text = "You made it out.\n\nseed %d" % director.seed_value
-	hud("End").visible = true
+	save.record_clear(_run_time)
+	save.write()
 	if _game:
 		_game.game_over("escaped")
+	_log("Run cleared", {"seconds": _run_time, "wrong_calls": _wrong_calls, "seed": director.seed_value})
+	var t := create_tween()
+	t.tween_property(_fade, "color:a", 1.0, 2.0)
+	await t.finished
+	for n in ["Station", "Decision", "PA", "Caption"]:
+		hud(n).visible = false
+	hud("End").text = ending_text()
+	hud("End").visible = true
+
+func ending_text() -> String:
+	return "YOU MADE IT OUT\n\n" \
+		+ "time  %s     ·     wrong calls  %d\n" % [SaveData.format_time(_run_time), _wrong_calls] \
+		+ "anomalies found this run  %d     ·     Lost & Found  %d / %d\n\n" % [
+			_found_this_run, save.found.size(), AnomalyCatalog.ALL.size()] \
+		+ "seed %d\n\nPress Enter" % director.seed_value
 
 func _say(text: String) -> void:
 	var pa := hud("PA")

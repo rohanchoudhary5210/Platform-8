@@ -18,6 +18,7 @@ var active := true:
 @onready var head: Node3D = $Head
 @onready var camera: Camera3D = $Head/Camera3D
 
+var sensitivity_scale := 1.0  # from the save's settings
 var _walked := 0.0
 var _step := AudioStreamPlayer.new()
 
@@ -40,8 +41,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not active:
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		rotate_y(-event.relative.x * SENSITIVITY)
-		head.rotation.x = clampf(head.rotation.x - event.relative.y * SENSITIVITY, -1.4, 1.4)
+		rotate_y(-event.relative.x * SENSITIVITY * sensitivity_scale)
+		head.rotation.x = clampf(head.rotation.x - event.relative.y * SENSITIVITY * sensitivity_scale, -1.4, 1.4)
 	elif event.is_action_pressed("ui_cancel"):
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	elif event is InputEventMouseButton and event.pressed:

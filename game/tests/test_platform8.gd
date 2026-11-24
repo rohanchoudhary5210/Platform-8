@@ -10,13 +10,44 @@ func _initialize() -> void:
 	_test_director_rules()
 	_test_director_seeded()
 	_test_decisions()
+	_test_save_data()
 	await _test_replay()
 	await _test_anomalies_revert()
 	await _test_playthrough()
 	await _test_walk()
 	await _test_walk_decisions()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE))
 	print("FAILED: %d" % _fails if _fails else "ALL TESTS PASSED")
 	quit(1 if _fails else 0)
+
+const TEST_SAVE := "user://test_save.cfg"
+
+## Every test game writes to a scratch save, never the player's.
+func _new_game() -> Node:
+	var game: Node = load("res://game/scenes/gameplay/Game.tscn").instantiate()
+	game.save_path = TEST_SAVE
+	return game
+
+func _test_save_data() -> void:
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE))
+	var s := SaveData.open(TEST_SAVE)
+	_check(s.found.is_empty() and s.clears == 0 and s.best_time == 0.0, "missing save starts fresh")
+	s.found["clock_backwards"] = true
+	s.best_station = 5
+	s.mouse_sensitivity = 1.5
+	s.record_clear(300.0)
+	s.record_clear(400.0)
+	_check(s.write() == OK, "save writes")
+	var r := SaveData.open(TEST_SAVE)
+	_check(r.found.has("clock_backwards") and r.best_station == 5 and r.clears == 2, "save round-trips progress")
+	_check(r.best_time == 300.0 and r.mouse_sensitivity == 1.5, "best time keeps the fastest; settings round-trip")
+	_check(SaveData.format_time(431.0) == "7:11", "time format m:ss")
+	var cfg := ConfigFile.new()
+	cfg.set_value("meta", "version", SaveData.VERSION + 1)
+	cfg.set_value("progress", "clears", 99)
+	cfg.save(TEST_SAVE)
+	_check(SaveData.open(TEST_SAVE).clears == 0, "save from a newer build is ignored, not misread")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE))
 
 func _check(ok: bool, what: String) -> void:
 	if not ok:
@@ -85,7 +116,7 @@ func _test_director_seeded() -> void:
 
 ## Week 2 "done when" (part 2): every anomaly's apply() changes the station and revert() restores it exactly.
 func _test_anomalies_revert() -> void:
-	var game: Node = load("res://game/scenes/gameplay/Game.tscn").instantiate()
+	var game: Node = _new_game()
 	root.add_child(game)
 	await process_frame  # _ready() has not run yet inside _initialize
 	var station: Station = game.station
@@ -139,7 +170,7 @@ func _test_decisions() -> void:
 ## Week 1 "done when": a wrong train returns you to the same station; 8 right calls open the exit.
 func _test_playthrough() -> void:
 	Engine.time_scale = 60.0  # train rides are 10–15 s
-	var game: Node = load("res://game/scenes/gameplay/Game.tscn").instantiate()
+	var game: Node = _new_game()
 	root.add_child(game)
 	await process_frame
 	var first_station: String = game.loop.station_name
@@ -158,6 +189,12 @@ func _test_playthrough() -> void:
 	_check(not game.station._exit_barrier.visible, "exit opens at station 8")
 	game.station.exit_reached.emit()
 	_check(game._ended, "ending plays")
+	var saved := SaveData.open(TEST_SAVE)
+	_check(saved.clears == 1 and saved.best_station == 8 and saved.best_time > 0.0, "clear is saved")
+	_check(saved.found.size() == game._found_this_run and saved.found.size() > 0, "found anomalies are saved")
+	_check(game.ending_text().contains("YOU MADE IT OUT"), "ending screen text")
+	await create_timer(3.0).timeout  # fade (2 s at 60x) then the ending shows
+	_check(game.hud("End").visible and not game.hud("Station").visible, "ending screen replaces the HUD")
 	Engine.time_scale = 1.0
 	game.free()
 
@@ -173,7 +210,7 @@ const ROUTE := [
 ]
 
 func _test_walk() -> void:
-	var game: Node = load("res://game/scenes/gameplay/Game.tscn").instantiate()
+	var game: Node = _new_game()
 	root.add_child(game)
 	await process_frame
 	var boards := []
@@ -226,7 +263,7 @@ func _hold_w(down: bool) -> void:
 
 ## Real physics walks for the escalator and gate decision points, both choices each.
 func _test_walk_decisions() -> void:
-	var game: Node = load("res://game/scenes/gameplay/Game.tscn").instantiate()
+	var game: Node = _new_game()
 	root.add_child(game)
 	await process_frame
 	var choices := []
@@ -262,7 +299,7 @@ func _test_replay() -> void:
 	r.free()
 	# In the game: a wrong call plays the replay before the ride.
 	Engine.time_scale = 60.0
-	var game: Node = load("res://game/scenes/gameplay/Game.tscn").instantiate()
+	var game: Node = _new_game()
 	root.add_child(game)
 	await process_frame
 	game.station.decided.emit(true)  # first loop is empty → wrong

@@ -10,6 +10,7 @@ func _initialize() -> void:
 	_test_director_rules()
 	_test_director_seeded()
 	_test_decisions()
+	await _test_replay()
 	await _test_anomalies_revert()
 	await _test_playthrough()
 	await _test_walk()
@@ -244,4 +245,29 @@ func _test_walk_decisions() -> void:
 		var ok := await _walk(game.player, c[1])
 		_check(ok and choices == [c[2]], "%s: %s choice registers (got %s)" % [c[0], "back" if c[2] else "forward", choices])
 		await _finish_ride(game)
+	game.free()
+
+## Wrong-call replay: picks the 3 s window around the closest pass, and plays after a wrong call.
+func _test_replay() -> void:
+	var r := Replay.new()
+	root.add_child(r)
+	await process_frame
+	for i in 600:  # 10 s walking straight down -Z at 3 m/s
+		r.record(Transform3D(Basis(), Vector3(0, 1.6, -i * 0.05)), 1.0 / 60.0)
+	var start := r.window_start(Vector3(1, 1.6, -20))  # closest at t ≈ 6.67 s
+	_check(absf(start - (20.0 / 3.0 - Replay.LEAD)) < 0.1, "replay window starts 2 s before the closest pass (got %.2f)" % start)
+	_check(r.window_start(Vector3(0, 1.6, 100)) == 0.0, "replay window clamps to the start")
+	_check(is_equal_approx(r.window_start(Vector3(0, 1.6, -500)), r._t - Replay.LENGTH), "replay window clamps to the end")
+	_check(Replay.focus_of(r) == null, "non-3D slot has no circle")
+	r.free()
+	# In the game: a wrong call plays the replay before the ride.
+	Engine.time_scale = 60.0
+	var game: Node = load("res://game/scenes/gameplay/Game.tscn").instantiate()
+	root.add_child(game)
+	await process_frame
+	game.station.decided.emit(true)  # first loop is empty → wrong
+	_check(game.replay.playing, "wrong call starts the replay")  # checked at once: at 60x speed it ends within a frame
+	await _until_ridden(game)
+	_check(not game.replay.playing and game.loop.count == 0, "replay ends, then the same station")
+	Engine.time_scale = 1.0
 	game.free()

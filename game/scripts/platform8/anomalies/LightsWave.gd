@@ -5,9 +5,12 @@ const ORDER := ["L6", "L5", "L4", "L3", "L2", "L1", "L8", "L0", "L7"]  # far end
 var _tween: Tween
 var _clunk: AudioStreamPlayer
 var _slot: Node
+var _was_visible := {}  # name -> visible before the wave (the door tube may be mid-flicker)
 
 func apply(slot: Node) -> void:
 	_slot = slot
+	for n in ORDER:
+		_was_visible[n] = slot.get_node(n).visible
 	slot.set_meta("flicker", false)
 	_clunk = AudioStreamPlayer.new()
 	_clunk.stream = SynthAudio.clunk()
@@ -25,7 +28,8 @@ func apply(slot: Node) -> void:
 
 func revert(slot: Node) -> void:
 	_tween.kill()
-	_all_on()
+	for n in ORDER:
+		slot.get_node(n).visible = _was_visible[n]
 	slot.remove_child(_clunk)
 	_clunk.free()
 	slot.set_meta("flicker", true)

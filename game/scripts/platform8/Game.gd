@@ -19,6 +19,7 @@ const DECISION_HINTS := {
 
 var loop := LoopManager.new()
 var director := AnomalyDirector.new(AnomalyCatalog.ALL)
+var replay := Replay.new()
 
 var _active: Anomaly
 var _riding := false
@@ -40,9 +41,14 @@ func inject_services(registry: Node) -> void:
 func _ready() -> void:
 	loop.seed_decisions(director.seed_value + 1)
 	_build_hud()
+	add_child(replay)
 	station.decided.connect(_on_decided)
 	station.exit_reached.connect(_on_exit)
 	_start_loop("")
+
+func _physics_process(delta: float) -> void:
+	if player.active:
+		replay.record(player.camera.global_transform, delta)
 
 func hud(label: String) -> Label:
 	return _hud.get_node(label)
@@ -52,6 +58,7 @@ func _start_loop(pa: String) -> void:
 		_active.revert(station.get_node(loop.current.slot_name))
 		_active = null
 	var done := loop.is_complete()
+	replay.clear()
 	station.show_station(loop.station_name, loop.count, loop.line_colour(), loop.next_station_name())
 	station.set_exit_open(done)
 	var dp: StringName = &"none" if done else loop.pick_decision()
@@ -79,6 +86,8 @@ func _on_decided(took_back: bool) -> void:
 	var correct := loop.resolve(took_back)
 	if correct and anomaly:
 		director.mark_found(anomaly.id)
+	if not correct:
+		await replay.play(anomaly, station.get_node_or_null(anomaly.slot_name) if anomaly else null, player.camera.fov)
 	atmosphere.riding = true
 	if dp == &"train":
 		await train.ride(loop.station_name, randf_range(RIDE_MIN, RIDE_MAX))

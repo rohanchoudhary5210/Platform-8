@@ -61,6 +61,7 @@ Learn this on loop 1. It's what you compare against every time after.
 | Right wall | Green `EXIT →` sign (points back towards the real exit behind you), **closed** lift doors, a **green dustbin on this wall** near the start |
 | Ceiling, just before the gates | **Two** CCTV cameras, one each side |
 | AFC gates | Red flaps **closed**; they open only when you walk up to them |
+| People | A **security guard** standing right of the gates, facing you; a **sweeper** in an orange vest on the left, half turned away |
 | Lights | Dim, pale greenish |
 | PA subtitle on arrival | `Yeh <name> station hai. This is <name>.` |
 
@@ -83,6 +84,7 @@ Learn this on loop 1. It's what you compare against every time after.
 | Floor sticker by the right door | `MIND THE GAP`, stops at the platform edge |
 | Train behind the right door | Destination `▶ <next station>` |
 | Platform far end | Lit, station name on the end wall |
+| People | A commuter with a backpack on the left facing the OPPOSITE doors; one in a maroon kurta further down on the right, facing along the platform |
 
 Always there and **never an anomaly**: the flickering tube over the train doors, the hum, the rumble, and the distant train screech.
 
@@ -122,20 +124,22 @@ All of these mean: **take the BACK choice.** Tier sets when they can appear: **S
 | 21 | New door | Passage, left wall | A brown staff **door** where there was blank wall |
 | 22 | Low ceiling | Passage | Ceiling and tube light are much **lower**, almost touching your head |
 | 23 | Train has no destination | Train behind the right door | Destination board is **blank** |
+| 24 | Guard watches you | Concourse, by the gates | The guard **turns to face you** and slowly follows you around the concourse |
+| 25 | Everyone faces one wall | Concourse and platform | The guard, the sweeper and both commuters all stand **facing the right-hand wall** |
 
 ### Intense (stations 7 and 8)
 
 | # | Anomaly | Where | Tell |
 |---|---|---|---|
-| 24 | HUD counter jumps | Top-left HUD | The count **flickers to `8 / 8`** every few seconds, then back |
-| 25 | Lights die towards you | Everywhere | Lights switch off **one by one** from the platform end towards you, each with a heavy clunk |
+| 26 | HUD counter jumps | Top-left HUD | The count **flickers to `8 / 8`** every few seconds, then back |
+| 27 | Lights die towards you | Everywhere | Lights switch off **one by one** from the platform end towards you, each with a heavy clunk |
 
 ### No anomaly
 If everything matches the "normal" tables (up to the decision point), take the **forward** choice.
 
 ## Full anomaly list (GDD)
 
-The GDD's 48-anomaly pool plus its train-side extras. ✅ = in the game now (25), ⏳ = planned.
+The GDD's 48-anomaly pool plus its train-side extras. ✅ = in the game now (27), ⏳ = planned.
 
 | GDD # | Anomaly | Category | Tier | Status |
 |---|---|---|---|---|
@@ -157,8 +161,8 @@ The GDD's 48-anomaly pool plus its train-side extras. ✅ = in the game now (25)
 | 16 | A phone rings inside the wall | Audio | Creepy | ✅ |
 | 17 | "Doors will open on the left", then right | Audio | Creepy | ⏳ needs PA voice + train doors |
 | 18 | Same passenger on every bench | NPCs | Creepy | ⏳ needs NPCs |
-| 19 | Guard never blinks and follows you | NPCs | Creepy | ⏳ needs NPCs |
-| 20 | Whole crowd faces one wall | NPCs | Creepy | ⏳ needs NPCs |
+| 19 | Guard never blinks and follows you | NPCs | Creepy | ✅ |
+| 20 | Whole crowd faces one wall | NPCs | Creepy | ✅ |
 | 21 | Kid with a balloon has no shadow | NPCs | Creepy | ⏳ needs NPCs |
 | 22 | Sweeper sweeps through the walls | NPCs | Intense | ⏳ needs NPCs |
 | 23 | Token machine won't stop dispensing | Object behaviour | Creepy | ⏳ machine model is in, tokens next |
@@ -209,6 +213,7 @@ The station's models are built in Blender by [`art/build_props.py`](art/build_pr
 - token vending machine
 - metro coach (outside, with doors, windows and line-colour stripes)
 - coach interior (benches, poles, grab handles, window band) for the train ride
+- four people: two commuters (one with a backpack, one in a kurta with a phone), a security guard and a sweeper. Each has a separate `Head` node so the game can turn it
 
 Wall, floor, ceiling and track-pit textures come from [`art/build_textures.py`](art/build_textures.py) (cream ceramic tiles, speckled granite floor, metal ceiling slats, concrete). They are mapped world-space, so every wall gets tiles at the right size without UVs.
 

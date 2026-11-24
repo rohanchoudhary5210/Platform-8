@@ -310,6 +310,13 @@ func _build_props() -> void:
 	for i in 2:
 		_model("cctv_camera", cctv, "Cam%d" % (i + 1), Vector3(-5.0 + 10.0 * i, 3.4, -17))
 
+	# People (art/build_props.py NPCS). Models face +Z; yaw turns them. Kept off the walking route.
+	var people := _node("People", props)
+	var body := Vector3(0.5, 1.7, 0.4)
+	_model("npc_guard", people, "Guard", Vector3(5.5, 0, -14.4), 0.0, body)
+	_model("npc_sweeper", people, "Sweeper", Vector3(-6.0, 0, -11.0), 0.6, body)
+	_model("npc_commuter_a", people, "CommuterA", Vector3(-2.2, -ESC_DROP, -80.0), -PI / 2, body)
+	_model("npc_commuter_b", people, "CommuterB", Vector3(2.0, -ESC_DROP, -91.0), PI, body)
 	_model("dustbin", props, "Dustbin", Vector3(8.6, 0, -7), -PI / 2, Vector3(0.6, 0.9, 0.6))
 	_model("token_machine", self, "TokenMachine", Vector3(-9.65, 0, -4), PI / 2, Vector3(0.6, 1.8, 0.8))
 

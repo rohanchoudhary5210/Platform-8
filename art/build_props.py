@@ -294,6 +294,84 @@ def coach_interior():
     return r
 
 
+# ── People ───────────────────────────────────────────────────────────────
+# Low-poly figures built from primitives, origin at the feet, facing -Y (Godot +Z).
+# "Head" is an empty at the neck so the game can turn it; "Eyes" sits under it.
+
+def person(name, shirt, pants, skin, hair, height=1.7, long_top=False):
+    r = root(name)
+    s = height / 1.7
+    for side in (-1, 1):
+        cyl(f"Leg{'L' if side < 0 else 'R'}", r, pants, 0.075 * s, 0.82 * s, (side * 0.1 * s, 0, 0.45 * s), verts=10)
+        box(f"Shoe{'L' if side < 0 else 'R'}", r, mat("Shoe", (0.06, 0.05, 0.05)), (0.11 * s, 0.24 * s, 0.08 * s),
+            (side * 0.1 * s, -0.04 * s, 0.04 * s), bevel=0.02)
+    top_h = 0.9 if long_top else 0.62
+    box("Torso", r, shirt, (0.42 * s, 0.24 * s, top_h * s), (0, 0, (1.48 - top_h / 2) * s), bevel=0.04 * s)
+    for side in (-1, 1):
+        cyl(f"Arm{'L' if side < 0 else 'R'}", r, shirt, 0.055 * s, 0.6 * s, (side * 0.27 * s, 0, 1.15 * s), verts=10)
+        obj_from(bpy.ops.mesh.primitive_uv_sphere_add, f"Hand{'L' if side < 0 else 'R'}", r, skin,
+                 (side * 0.27 * s, 0, 0.82 * s), radius=0.05 * s, segments=10, ring_count=6)
+    cyl("Neck", r, skin, 0.05 * s, 0.1 * s, (0, 0, 1.52 * s), verts=10)
+    head = bpy.data.objects.new("Head", None)
+    bpy.context.scene.collection.objects.link(head)
+    head.parent = r
+    head.location = (0, 0, 1.55 * s)
+    obj_from(bpy.ops.mesh.primitive_uv_sphere_add, "Face", head, skin, (0, 0, 0.11 * s), scale=(0.9, 1, 1.1),
+             radius=0.105 * s, segments=16, ring_count=10)
+    obj_from(bpy.ops.mesh.primitive_uv_sphere_add, "Hair", head, hair, (0, 0.025 * s, 0.15 * s), scale=(0.95, 1, 0.85),
+             radius=0.105 * s, segments=16, ring_count=10)
+    eyes = bpy.data.objects.new("Eyes", None)
+    bpy.context.scene.collection.objects.link(eyes)
+    eyes.parent = head
+    for side in (-1, 1):
+        box(f"Eye{'L' if side < 0 else 'R'}", eyes, mat("Eye", (0.02, 0.02, 0.02)), (0.03 * s, 0.01 * s, 0.014 * s),
+            (side * 0.038 * s, -0.093 * s, 0.12 * s))
+    return r, head, s
+
+
+SKIN = [(0.55, 0.38, 0.27), (0.42, 0.28, 0.2)]
+HAIR = lambda: mat("Hair", (0.03, 0.025, 0.02), 0.0, 0.8)
+
+
+def npc_commuter_a():
+    """Office commuter: blue shirt, grey trousers, backpack."""
+    r, _, s = person("npc_commuter_a", mat("ShirtBlue", (0.25, 0.4, 0.62)), mat("TrouserGrey", (0.25, 0.25, 0.28)),
+                     mat("SkinA", SKIN[0]), HAIR())
+    box("Backpack", r, mat("Backpack", (0.1, 0.12, 0.1)), (0.32 * s, 0.16 * s, 0.42 * s), (0, 0.2 * s, 1.2 * s), bevel=0.03)
+    return r
+
+
+def npc_commuter_b():
+    """Commuter in a long maroon kurta, holding a phone."""
+    r, _, s = person("npc_commuter_b", mat("Kurta", (0.45, 0.1, 0.14)), mat("TrouserDark", (0.12, 0.12, 0.14)),
+                     mat("SkinB", SKIN[1]), HAIR(), height=1.62, long_top=True)
+    box("Phone", r, mat("Phone", (0.02, 0.02, 0.03), 0.3, 0.3), (0.07 * s, 0.01 * s, 0.13 * s), (0.27 * s, -0.06 * s, 0.86 * s))
+    return r
+
+
+def npc_guard():
+    """Station security guard: khaki uniform, beret, belt."""
+    khaki = mat("Khaki", (0.5, 0.45, 0.3))
+    r, head, s = person("npc_guard", khaki, khaki, mat("SkinA", SKIN[0]), HAIR(), height=1.76)
+    box("Belt", r, mat("Belt", (0.08, 0.06, 0.04)), (0.44 * s, 0.26 * s, 0.06 * s), (0, 0, 0.88 * s))
+    obj_from(bpy.ops.mesh.primitive_uv_sphere_add, "Beret", head, mat("Beret", (0.1, 0.12, 0.3)), (0.02 * s, 0.01 * s, 0.2 * s),
+             scale=(1.1, 1.1, 0.45), radius=0.11 * s, segments=16, ring_count=8)
+    return r
+
+
+def npc_sweeper():
+    """Night cleaner: orange safety vest over grey, long broom."""
+    r, _, s = person("npc_sweeper", mat("Overall", (0.3, 0.32, 0.33)), mat("Overall", (0.3, 0.32, 0.33)),
+                     mat("SkinB", SKIN[1]), HAIR(), height=1.66)
+    box("Vest", r, mat("SafetyVest", (0.95, 0.4, 0.05)), (0.44 * s, 0.26 * s, 0.42 * s), (0, 0, 1.24 * s))
+    cyl("BroomHandle", r, mat("Bamboo", (0.6, 0.5, 0.3)), 0.015, 1.3 * s, (0.27 * s, -0.12 * s, 0.75 * s), rot=(0.25, 0, 0), verts=8)
+    box("BroomHead", r, mat("Bristle", (0.35, 0.3, 0.2)), (0.35 * s, 0.08 * s, 0.12 * s), (0.27 * s, -0.27 * s, 0.06 * s))
+    return r
+
+
+NPCS = [npc_commuter_a, npc_commuter_b, npc_guard, npc_sweeper]
+
+
 PROPS = [dustbin, fire_extinguisher, water_cooler, cctv_camera, wall_clock, afc_gate, bench, pillar,
          lift_doors, token_machine]
 TRAINS = [train_coach, coach_interior]  # exported too, but kept out of the small-prop preview grid
@@ -316,7 +394,7 @@ def reset():
 
 def main():
     # One clean scene per prop, so part names stay exact (no "Body.001") in the exported file.
-    for p in PROPS + TRAINS:
+    for p in PROPS + TRAINS + NPCS:
         reset()
         r = p()
         select_tree(r)
@@ -331,6 +409,8 @@ def main():
     roots[4].location.z = 1.5  # wall clock
     for i, t in enumerate(TRAINS):
         t().location = (6 + i * 5, 14, 0)  # in the .blend, behind the preview grid
+    for i, n in enumerate(NPCS):
+        n().location = (1.1 + i * 2.2, -2.4, 0)  # a row in front of the props grid
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(ROOT, "art", "platform8_props.blend"))
     preview()
 
@@ -346,7 +426,7 @@ def preview():
     cam = bpy.data.objects.new("PreviewCam", bpy.data.cameras.new("PreviewCam"))
     scene.collection.objects.link(cam)
     cam.data.type = "ORTHO"
-    cam.data.ortho_scale = 12.5
+    cam.data.ortho_scale = 13.5
     cam.location = Vector((4.4 - 9.0, 1.5 - 11.0, 8.0))
     cam.rotation_euler = (math.radians(62), 0, math.radians(-39))
     scene.camera = cam

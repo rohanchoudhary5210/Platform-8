@@ -122,7 +122,7 @@ func _test_anomalies_revert() -> void:
 	root.add_child(game)
 	await process_frame  # _ready() has not run yet inside _initialize
 	var station: Station = game.station
-	_check(AnomalyCatalog.ALL.size() == 25, "25 anomalies in catalog (got %d)" % AnomalyCatalog.ALL.size())
+	_check(AnomalyCatalog.ALL.size() == 27, "27 anomalies in catalog (got %d)" % AnomalyCatalog.ALL.size())
 	var ids := {}
 	var per_category := {}
 	for data: AnomalyData in AnomalyCatalog.ALL:
@@ -145,6 +145,16 @@ func _test_anomalies_revert() -> void:
 			for k in before:
 				if after.get(k) != before[k]:
 					printerr("   %s: %s -> %s" % [k, before[k], after.get(k)])
+	# The guard follows: after a second he is closer to the player, and revert puts him back.
+	var guard: Node3D = station.get_node("Props/People/Guard")
+	var home := guard.transform
+	var gap := guard.global_position.distance_to(game.player.global_position)
+	var watch := Anomaly.create(load("res://game/data/anomalies/guard_watches.tres"))
+	watch.apply(guard)
+	await create_timer(1.0).timeout
+	_check(guard.global_position.distance_to(game.player.global_position) < gap - 0.2, "guard follows the player")
+	watch.revert(guard)
+	_check(guard.transform == home, "guard goes back to his post")
 	for c in per_category:
 		_check(per_category[c] <= ceili(AnomalyCatalog.ALL.size() * 0.2), "category %s over 20%% of the pool" % c)
 	game.free()

@@ -339,7 +339,8 @@ func _test_token_machine() -> void:
 	Input.parse_input_event(again)
 	await process_frame
 	_check(game.player.tokens == 1 and tvm.tokens.get_child_count() == 0, "E picks the token up")
-	await physics_frame
+	for i in 2:  # physics_frame fires before nodes' _physics_process
+		await physics_frame
 	_check(game.hud("Tokens").text.contains("1"), "HUD shows the token")
 	game.player.place(game.station.spawn.global_transform)
 	for i in 3:

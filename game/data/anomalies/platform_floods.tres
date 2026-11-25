@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="AnomalyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/AnomalyData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"platform_floods"
+display_name = "Platform floods"
+category = &"danger"
+tier = 3
+location = &"platform"
+script_path = "res://game/scripts/platform8/anomalies/PlatformFlood.gd"
+slot_name = NodePath("Props/Flood")

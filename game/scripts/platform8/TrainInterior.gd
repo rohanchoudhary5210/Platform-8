@@ -39,12 +39,20 @@ func _ready() -> void:
 			_tunnel_lights.append(m)
 
 	_display = Label3D.new()
-	_display.position = Vector3(-1.44, 2.1, 0)
+	_display.position = Vector3(-1.41, 2.13, 0)  # on Display_L
 	_display.rotation.y = PI / 2
-	_display.font_size = 40
+	_display.font_size = 30
 	_display.modulate = Color(1.0, 0.35, 0.2)
 	add_child(_display)
 
+	# Rush hour: a few people standing in the aisle (the ones nearest the camera stay out of the display's way).
+	for spot: Array in [["npc_commuter_b", Vector3(-0.35, 0, 1.25), 0.3], ["npc_commuter_a", Vector3(0.1, 0, -2.4), 2.8],
+			["npc_commuter_a", Vector3(-0.4, 0, 4.5), PI], ["npc_commuter_b", Vector3(0.3, 0, -5.5), 0.0]]:
+		var who: Node3D = load("res://game/assets/models/%s.gltf" % spot[0]).instantiate()
+		who.position = spot[1]
+		who.rotation.y = spot[2]
+		add_child(who)
+		NpcWalker.play(who, &"Idle", spot[1].z)
 	# Seated on the right bench, looking across at the left windows and the display.
 	camera = Camera3D.new()
 	camera.position = Vector3(1.0, 1.15, 0)
@@ -60,9 +68,9 @@ func ride(next_name: String, duration: float) -> void:
 	set_process(true)
 	var doors := minf(2.5, duration * 0.25)
 	_display.text = "DOORS CLOSING"
-	await get_tree().create_timer(doors).timeout
+	await get_tree().create_timer(doors, false).timeout  # false: the pause menu stops the ride
 	_display.text = "NEXT STATION\n" + next_name.to_upper()
-	await get_tree().create_timer(duration - doors).timeout
+	await get_tree().create_timer(duration - doors, false).timeout
 	set_process(false)
 	visible = false
 

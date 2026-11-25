@@ -11,6 +11,7 @@ const MAX_EMPTY_STREAK := 2
 var seed_value: int
 var seen: Dictionary = {}   # id -> true
 var found: Dictionary = {}  # id -> true
+var excluded: Dictionary = {}  # id -> true, never picked (e.g. HUD anomalies in hardcore mode)
 
 var _pool: Array
 var _rng := RandomNumberGenerator.new()
@@ -52,17 +53,26 @@ func _empty() -> AnomalyData:
 
 func _candidates(count: int, max_location: int) -> Array:
 	var c := _filter(count, max_location)
+	# This tier (and the ones below) is used up: borrow an unshown one from the nearest tier above.
+	var t := tier_for(count) + 1
+	while c.is_empty() and t <= 3:
+		c = _pool.filter(func(a): return a.tier == t and _fits(a, max_location, false))
+		t += 1
 	if c.is_empty():
-		# shortcut: recycles seen anomalies once the pool runs dry; rare once the pool is ~50 (Week 2+).
-		seen.clear()
-		c = _filter(count, max_location)
+		# Everything that fits this loop (any tier, location, decision) was shown already: only those may
+		# come back. The rest stay seen, so nothing repeats while an unshown one could still be picked.
+		c = _filter(count, max_location, true)
+		for a: AnomalyData in c:
+			seen.erase(a.id)
 	return c
 
-func _filter(count: int, max_location: int) -> Array:
+func _filter(count: int, max_location: int, allow_seen := false) -> Array:
 	var tier := tier_for(count)
-	var ok := func(a: AnomalyData) -> bool:
-		return not seen.has(a.id) and a.category != _last_category and a.solo_ok and a.route_index() <= max_location
-	var exact := _pool.filter(func(a): return a.tier == tier and ok.call(a))
+	var exact := _pool.filter(func(a): return a.tier == tier and _fits(a, max_location, allow_seen))
 	if not exact.is_empty():
 		return exact
-	return _pool.filter(func(a): return a.tier < tier and ok.call(a))
+	return _pool.filter(func(a): return a.tier < tier and _fits(a, max_location, allow_seen))
+
+func _fits(a: AnomalyData, max_location: int, allow_seen: bool) -> bool:
+	return (allow_seen or not seen.has(a.id)) and not excluded.has(a.id) and a.category != _last_category and a.solo_ok \
+			and a.route_index() <= max_location and max_location <= a.max_decision_reach

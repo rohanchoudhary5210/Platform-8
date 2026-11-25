@@ -56,6 +56,10 @@ static func ring() -> AudioStreamWAV:
 		var on := fmod(t, 0.6) < 0.4 and t < 1.2
 		return 0.4 * (sin(TAU * 440 * t) + sin(TAU * 480 * t)) * (1.0 if on else 0.0), true)
 
+## Rushing water: noise with a slow surge (3 whole cycles in 2 s, so it loops). Loops.
+static func rush() -> AudioStreamWAV:
+	return make(2.0, func(t: float): return randf_range(-0.45, 0.45) * (0.7 + 0.3 * sin(TAU * 1.5 * t)), true)
+
 ## Heavy breaker clunk.
 static func clunk() -> AudioStreamWAV:
 	return make(0.5, func(t: float): return (0.8 * sin(TAU * 55 * t) + randf_range(-0.3, 0.3)) * exp(-t * 12.0))

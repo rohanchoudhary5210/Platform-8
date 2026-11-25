@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AnomalyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/AnomalyData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"display_same_station"
+display_name = "Agla station: this same station"
+category = &"train"
+tier = 2
+location = &"platform"
+script_path = "res://game/scripts/platform8/anomalies/CoachDisplay.gd"
+slot_name = NodePath("Props/CoachDisplays/Forward")
+params = {"mode": "same_station"}

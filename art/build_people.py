@@ -5,7 +5,8 @@ Run (from the project folder):
 
 Body: a stick skeleton -> Skin modifier -> Subdivision, so it's one smooth mesh. Head is a sphere with
 eyes, brows, nose, ears, mouth and a hair cap. Rig: 18 bones, weights by distance to each bone.
-Animations (glTF NLA tracks): "Idle" (4 s, breathing and a slow look around) and "Walk" (1 s, two steps).
+Animations (glTF NLA tracks): "Idle" (4 s, breathing and a slow look around), "Walk" (1 s, two steps)
+and "Run" (0.67 s, two strides, for chases).
 Origin at the feet, facing -Y (Godot +Z). Outputs game/assets/models/npc_*.gltf and art/people_preview.png.
 """
 import math
@@ -128,7 +129,8 @@ def paint(o, p, s, shirt, pants, skin, shoes, long_top):
         c = f.center
         if c.z < 0.13 * s:
             f.material_index = 3
-        elif c.z > p["neck"].z - 0.01 * s or (abs(c.x) > 0.17 * s and c.z < wrist_z):
+        elif (c.z > p["neck"].z - 0.01 * s and abs(c.x) < 0.075 * s) or c.z > p["neck_top"].z - 0.02 * s \
+                or (abs(c.x) > 0.17 * s and c.z < wrist_z):
             f.material_index = 2  # neck, hands
         elif c.z < p["pelvis"].z - 0.02 * s and abs(c.x) < 0.2 * s:
             hem = p["knee.L"].z + 0.08 * s if long_top else 0.0
@@ -162,17 +164,81 @@ def boxp(name, material, loc, size, rot=(0, 0, 0)):
     return o
 
 
+def rod(name, material, a, b, r, verts=10):
+    """Cylinder from point a to point b."""
+    d = b - a
+    rot = Vector((0, 0, 1)).rotation_difference(d.normalized()).to_euler()
+    return part(bpy.ops.mesh.primitive_cylinder_add, name, material, (a + b) / 2, rot=rot, radius=r, depth=d.length,
+                vertices=verts)
+
+
+def ring(name, material, loc, major, minor, rot=(0, 0, 0), scale=(1, 1, 1)):
+    return part(bpy.ops.mesh.primitive_torus_add, name, material, loc, scale, rot, major_radius=major,
+                minor_radius=minor, major_segments=20, minor_segments=6)
+
+
+def soft_box(name, material, loc, size, bevel):
+    """Box with rounded edges (bags)."""
+    o = boxp(name, material, loc, size)
+    b = o.modifiers.new("Bevel", "BEVEL")
+    b.width = bevel
+    b.segments = 3
+    bpy.context.view_layer.objects.active = o
+    bpy.ops.object.modifier_apply(modifier="Bevel")
+    for f in o.data.polygons:
+        f.use_smooth = True
+    return o
+
+
+def strip(name, material, a, b, width, thick):
+    """Flat band from a to b (straps, a dupatta), its face towards -Y."""
+    d = b - a
+    q = Vector((0, 0, 1)).rotation_difference(d.normalized())
+    return boxp(name, material, (a + b) / 2, Vector((width, thick, d.length)), rot=q.to_euler())
+
+
+def hands(s, p, skin):
+    """Mitten hands with a thumb, on the hand bones (the skin mesh alone ends in stubs)."""
+    out = []
+    for side, n in ((1, "L"), (-1, "R")):
+        h = p[f"hand.{n}"]
+        out.append((sphere(f"Hand{n}", skin, h + Vector((0, 0, -0.01)) * s, 0.045 * s, (0.5, 0.85, 1.25), segs=12, rings=8), f"hand.{n}"))
+        out.append((sphere(f"Thumb{n}", skin, h + Vector((-side * 0.012, -0.035, 0.03)) * s, 0.016 * s, (0.8, 0.8, 1.6), segs=8, rings=6), f"hand.{n}"))
+    return out
+
+
+def collar(s, p, material, width):
+    """Shirt collar ring at the base of the neck."""
+    return [(ring("Collar", material, p["neck"] + Vector((0, 0.005, -0.012)) * s, 0.062 * s, 0.017 * s,
+                  scale=(1.05 * width, 0.95, 0.7)), "chest")]
+
+
+def shirt_front(s, width, material, button, pockets=1):
+    """Button placket and chest pocket(s) on the shirt front."""
+    y = -0.117 * s * width
+    out = [(boxp("Placket", material, Vector((0, y, 1.24 * s)), Vector((0.026 * s, 0.006, 0.36 * s))), "chest")]
+    for i in range(4):
+        out.append((sphere(f"Button{i}", button, Vector((0, y - 0.004, (1.38 - i * 0.09) * s)), 0.006 * s, segs=6, rings=4), "chest"))
+    for k in range(pockets):
+        x = (0.075 if k == 0 else -0.075) * s * width
+        out.append((boxp(f"Pocket{k}", material, Vector((x, y + 0.004, 1.3 * s)), Vector((0.075 * s, 0.006, 0.085 * s))), "chest"))
+    return out
+
+
 def head(s, skin, hair, eye_dark, long_hair=False):
     """Head sphere plus face features and a hair cap. Everything is weighted to the 'head' bone."""
     c = Vector((0, -0.005, 1.645)) * s
     parts = [sphere("Head", skin, c, 0.1 * s, (0.9, 1.0, 1.15))]
     for side in (-1, 1):
-        parts.append(sphere(f"Eye{side}", eye_dark, c + Vector((side * 0.034, -0.088, 0.018)) * s, 0.011 * s, segs=8, rings=6))
+        parts.append(sphere(f"EyeWhite{side}", mat("EyeWhite", (0.85, 0.83, 0.78), 0.3), c + Vector((side * 0.034, -0.083, 0.018)) * s,
+                            0.016 * s, (1.0, 0.55, 0.7), segs=10, rings=6))
+        parts.append(sphere(f"Eye{side}", eye_dark, c + Vector((side * 0.034, -0.091, 0.018)) * s, 0.0085 * s, (1, 0.6, 1), segs=8, rings=6))
         parts.append(boxp(f"Brow{side}", hair, c + Vector((side * 0.035, -0.092, 0.042)) * s, Vector((0.034, 0.01, 0.008)) * s,
                           rot=(0, side * -0.12, 0)))
         parts.append(sphere(f"Ear{side}", skin, c + Vector((side * 0.09, 0.005, 0.005)) * s, 0.026 * s, (0.35, 0.7, 1.0), segs=10, rings=6))
     parts.append(sphere("Nose", skin, c + Vector((0, -0.1, -0.005)) * s, 0.017 * s, (0.8, 1.0, 1.4), segs=10, rings=6))
-    parts.append(boxp("Mouth", mat("Lips", (0.3, 0.13, 0.11)), c + Vector((0, -0.094, -0.045)) * s, Vector((0.034, 0.008, 0.007)) * s))
+    parts.append(sphere("Mouth", mat("Lips", (0.36, 0.16, 0.13), 0.5), c + Vector((0, -0.092, -0.046)) * s, 0.018 * s, (1.0, 0.35, 0.3), segs=10, rings=6))
+    parts.append(sphere("Chin", skin, c + Vector((0, -0.075, -0.085)) * s, 0.03 * s, (1.1, 0.8, 0.7), segs=10, rings=6))
     # Hair: a slightly bigger sphere, cut away below the hairline and over the face.
     h = sphere("Hair", hair, c + Vector((0, 0.006, 0.012)) * s, 0.104 * s, (0.93, 1.03, 1.15), segs=24, rings=16)
     bm = bmesh.new()
@@ -258,6 +324,22 @@ def walk_pose(phase):
     }
 
 
+def run_pose(phase):
+    """Like walk_pose but longer strides, high knees, pumping arms and a forward lean (guard chase)."""
+    sw = math.sin(phase * math.tau)
+    lift_l = max(0.0, -math.sin(phase * math.tau + 0.8))
+    lift_r = max(0.0, math.sin(phase * math.tau + 0.8))
+    return {
+        "thigh.L": (-45 * sw - 10 * lift_l, 0, 0), "thigh.R": (45 * sw - 10 * lift_r, 0, 0),
+        "shin.L": (85 * lift_l + 10, 0, 0), "shin.R": (85 * lift_r + 10, 0, 0),
+        "foot.L": (-15 * lift_l, 0, 0), "foot.R": (-15 * lift_r, 0, 0),
+        "upperarm.L": (40 * sw, 0, 6), "upperarm.R": (-40 * sw, 0, -6),
+        "forearm.L": (-75, 0, 0), "forearm.R": (-75, 0, 0),
+        "spine": (12, 8 * sw, 0), "chest": (4, -6 * sw, 0), "head": (-8, 0, 0),
+        "hips": ("loc", (0, 0.06 * abs(math.cos(phase * math.tau)), 0)),
+    }
+
+
 def idle_pose(phase):
     b = math.sin(phase * math.tau * 2)  # two breaths per loop
     look = math.sin(phase * math.tau)
@@ -309,6 +391,9 @@ def person(name, shirt, pants, skin, hair, shoes=(0.06, 0.05, 0.05), height=1.7,
         k = part(bpy.ops.mesh.primitive_cone_add, "Kurta", m_shirt, (0, 0, 0.73 * s), (1.0, 0.72, 1.0),
                  radius1=0.235 * s * width, radius2=0.165 * s * width, depth=0.42 * s, vertices=24, end_fill_type="NOTHING")
         rigid.append((k, "hips"))
+    rigid += hands(s, p, m_skin)
+    if not long_top:
+        rigid += collar(s, p, m_shirt, width)
     rigid += (extras(s, p) if extras else [])
     for o, bone in rigid:
         bind(o, bone)
@@ -324,21 +409,52 @@ def person(name, shirt, pants, skin, hair, shoes=(0.06, 0.05, 0.05), height=1.7,
     body.modifiers.new("Rig", "ARMATURE").object = rig
     animate(rig, "Idle", 4 * FPS, idle_pose)
     animate(rig, "Walk", FPS, walk_pose)
+    animate(rig, "Run", 16, run_pose, step=2)  # 0.67 s, two strides
     return r
 
 
 def npc_commuter_a():
-    """Office commuter: light blue shirt, grey trousers, backpack."""
+    """Office commuter: light blue shirt with pocket and buttons, grey trousers, glasses, watch, padded backpack."""
     def bag(s, p):
-        return [(boxp("Backpack", mat("Backpack", (0.08, 0.1, 0.09)), Vector((0, 0.17, 1.2)) * s, Vector((0.3, 0.14, 0.42)) * s), "chest")]
+        pack, trim = mat("Backpack", (0.08, 0.1, 0.09)), mat("BackpackTrim", (0.04, 0.05, 0.05))
+        out = [(soft_box("Backpack", pack, Vector((0, 0.18, 1.2)) * s, Vector((0.3, 0.15, 0.42)) * s, 0.045 * s), "chest"),
+               (soft_box("BackpackPocket", pack, Vector((0, 0.265, 1.1)) * s, Vector((0.22, 0.05, 0.18)) * s, 0.02 * s), "chest"),
+               (boxp("BackpackZip", trim, Vector((0, 0.3, 1.18)) * s, Vector((0.2, 0.005, 0.01)) * s), "chest")]
+        for side in (-1, 1):  # straps over the shoulders and down the front
+            out.append((strip(f"Strap{side}", trim, Vector((side * 0.1, 0.12, 1.43)) * s, Vector((side * 0.1, -0.11, 1.38)) * s, 0.04 * s, 0.012 * s), "chest"))
+            out.append((strip(f"StrapFront{side}", trim, Vector((side * 0.1, -0.118, 1.38)) * s, Vector((side * 0.11, -0.105, 1.12)) * s, 0.035 * s, 0.01 * s), "chest"))
+        frame = mat("Glasses", (0.03, 0.03, 0.03), 0.3)
+        c = Vector((0, -0.005, 1.645)) * s
+        for side in (-1, 1):
+            out.append((ring(f"Lens{side}", frame, c + Vector((side * 0.034, -0.1, 0.018)) * s, 0.019 * s, 0.0025 * s, rot=(1.5708, 0, 0)), "head"))
+            out.append((boxp(f"Temple{side}", frame, c + Vector((side * 0.083, -0.05, 0.022)) * s, Vector((0.004, 0.09, 0.004)) * s), "head"))
+        out.append((boxp("Bridge", frame, c + Vector((0, -0.102, 0.022)) * s, Vector((0.03, 0.004, 0.004)) * s), "head"))
+        out.append((ring("Watch", mat("Watch", (0.1, 0.1, 0.12), 0.3), p["wrist.L"], 0.034 * s, 0.009 * s), "forearm.L"))
+        return out + shirt_front(s, 1.0, mat("npc_commuter_aShirt", (0.45, 0.6, 0.78)), mat("ButtonW", (0.9, 0.9, 0.88)))
     return person("npc_commuter_a", (0.45, 0.6, 0.78), (0.22, 0.22, 0.25), SKIN[0], (0.03, 0.025, 0.02), extras=bag)
 
 
 def npc_commuter_b():
     """Woman in a long maroon kurta with dark leggings, plait down the back, phone in hand."""
     def phone(s, p):
-        return [(boxp("Phone", mat("Phone", (0.02, 0.02, 0.03)), p["hand.R"] + Vector((0, -0.03, 0.02)) * s,
-                      Vector((0.012, 0.07, 0.14)) * s), "hand.R")]
+        gold, scarf = mat("Gold", (0.8, 0.6, 0.2), 0.35), mat("Dupatta", (0.88, 0.62, 0.16))
+        c = Vector((0, -0.005, 1.645)) * s
+        out = [(boxp("Phone", mat("Phone", (0.02, 0.02, 0.03)), p["hand.R"] + Vector((0, -0.03, 0.02)) * s,
+                     Vector((0.012, 0.07, 0.14)) * s), "hand.R"),
+               (sphere("Bindi", mat("Bindi", (0.7, 0.05, 0.08)), c + Vector((0, -0.098, 0.05)) * s, 0.005 * s, segs=6, rings=4), "head"),
+               # Dupatta over the left shoulder, across the chest, and hanging down the back.
+               (strip("Dupatta", scarf, Vector((0.11, -0.09, 1.45)) * s, Vector((-0.13, -0.118, 1.02)) * s, 0.085 * s, 0.01 * s), "chest"),
+               (strip("DupattaBack", scarf, Vector((0.12, 0.07, 1.45)) * s, Vector((0.15, 0.12, 0.95)) * s, 0.085 * s, 0.01 * s), "chest"),
+               (ring("KurtaNeck", mat("KurtaTrim", (0.8, 0.6, 0.25)), p["neck"] + Vector((0, 0.005, -0.012)) * s, 0.06 * s, 0.01 * s, scale=(1, 0.95, 0.7)), "chest")]
+        for side in (-1, 1):
+            out.append((sphere(f"Earring{side}", gold, c + Vector((side * 0.088, 0.0, -0.035)) * s, 0.008 * s, segs=6, rings=4), "head"))
+            n = "L" if side == 1 else "R"
+            for k in range(2):
+                out.append((ring(f"Bangle{n}{k}", gold, p[f"wrist.{n}"] + Vector((0, 0, 0.015 - k * 0.022)) * s, 0.036 * s, 0.005 * s), f"forearm.{n}"))
+        for i in range(7):  # plait down the back
+            out.append((sphere(f"Plait{i}", mat("Hair", (0.02, 0.015, 0.012), 0.9), Vector((0, 0.1 + i * 0.008, 1.58 - i * 0.07)) * s,
+                               (0.032 - i * 0.002) * s, (1, 0.8, 1.2), segs=10, rings=6), "chest" if i > 1 else "head"))
+        return out
     return person("npc_commuter_b", (0.5, 0.1, 0.16), (0.1, 0.1, 0.12), SKIN[1], (0.02, 0.015, 0.012),
                   height=1.6, width=0.92, long_top=True, long_hair=True, extras=phone)
 
@@ -347,10 +463,21 @@ def npc_guard():
     """Security guard: khaki uniform, navy beret, moustache, belt."""
     def kit(s, p):
         c = Vector((0, -0.005, 1.645)) * s
-        return [
-            (sphere("Beret", mat("Beret", (0.08, 0.1, 0.25)), c + Vector((0.015, 0.01, 0.085)) * s, 0.105 * s, (1.08, 1.08, 0.4)), "head"),
-            (boxp("Moustache", mat("Hair", (0.03, 0.025, 0.02)), c + Vector((0, -0.096, -0.028)) * s, Vector((0.05, 0.012, 0.012)) * s), "head"),
+        navy, silver = mat("Beret", (0.08, 0.1, 0.25)), mat("Badge", (0.75, 0.75, 0.72), 0.3)
+        khaki = mat("npc_guardShirt", (0.52, 0.47, 0.32))
+        out = [
+            (sphere("Beret", navy, c + Vector((0.015, 0.01, 0.085)) * s, 0.105 * s, (1.08, 1.08, 0.4)), "head"),
+            (sphere("CapBadge", silver, c + Vector((-0.04, -0.085, 0.09)) * s, 0.012 * s, (1, 0.4, 1), segs=8, rings=4), "head"),
+            (sphere("Moustache", mat("Hair", (0.03, 0.025, 0.02)), c + Vector((0, -0.094, -0.03)) * s, 0.026 * s, (1.0, 0.35, 0.3), segs=10, rings=6), "head"),
+            (boxp("ChestBadge", silver, Vector((-0.08, -0.124, 1.37)) * s * 1.0, Vector((0.05, 0.006, 0.03)) * s), "chest"),
+            (boxp("NamePlate", mat("NamePlate", (0.08, 0.1, 0.25)), Vector((0.08, -0.124, 1.37)) * s, Vector((0.06, 0.006, 0.015)) * s), "chest"),
+            # Whistle cord from the left shoulder to the pocket, and a lathi on the belt.
+            (rod("Lanyard", mat("Lanyard", (0.6, 0.1, 0.1)), Vector((0.16, -0.06, 1.44)) * s, Vector((0.08, -0.125, 1.3)) * s, 0.004 * s, 6), "chest"),
+            (rod("Lathi", mat("Lathi", (0.35, 0.2, 0.08), 0.6), Vector((0.2, 0.0, 0.98)) * s, Vector((0.24, 0.06, 0.42)) * s, 0.016 * s, 8), "hips"),
         ]
+        for side in (-1, 1):  # epaulettes on the shoulders
+            out.append((boxp(f"Epaulette{side}", navy, Vector((side * 0.15, 0.0, 1.47)) * s, Vector((0.07, 0.05, 0.012)) * s), "chest"))
+        return out + shirt_front(s, 1.08, khaki, silver, pockets=2)
     return person("npc_guard", (0.52, 0.47, 0.32), (0.45, 0.4, 0.27), SKIN[0], (0.03, 0.025, 0.02),
                   height=1.76, width=1.08, extras=kit)
 
@@ -358,12 +485,25 @@ def npc_guard():
 def npc_sweeper():
     """Night cleaner: grey overalls, orange safety vest, broom."""
     def kit(s, p):
-        vest = part(bpy.ops.mesh.primitive_cylinder_add, "Vest", mat("SafetyVest", (0.95, 0.42, 0.05)), (0, 0, 1.22 * s),
+        orange, reflect = mat("SafetyVest", (0.95, 0.42, 0.05)), mat("Reflective", (0.85, 0.85, 0.8), 0.2)
+        vest = part(bpy.ops.mesh.primitive_cylinder_add, "Vest", orange, (0, 0, 1.22 * s),
                     (1.0, 0.66, 1.0), radius=0.178 * s, depth=0.34 * s, vertices=24, end_fill_type="NOTHING")
-        handle = part(bpy.ops.mesh.primitive_cylinder_add, "BroomHandle", mat("Bamboo", (0.6, 0.5, 0.3)),
-                      p["hand.R"] + Vector((0, -0.08, -0.25)) * s, rot=(0.3, 0, 0), radius=0.014 * s, depth=1.2 * s, vertices=8)
-        head_b = boxp("BroomHead", mat("Bristle", (0.35, 0.3, 0.2)), p["hand.R"] + Vector((0, -0.25, -0.76)) * s, Vector((0.32, 0.07, 0.1)) * s)
-        return [(vest, "chest"), (handle, "hand.R"), (head_b, "hand.R")]
+        out = [(vest, "chest")]
+        for i, z in enumerate((1.14, 1.3)):  # reflective bands round the vest
+            out.append((part(bpy.ops.mesh.primitive_cylinder_add, f"VestBand{i}", reflect, (0, 0, z * s), (1.0, 0.66, 1.0),
+                             radius=0.181 * s, depth=0.03 * s, vertices=24, end_fill_type="NOTHING"), "chest"))
+        c = Vector((0, -0.005, 1.645)) * s
+        cap = mat("SweeperCap", (0.2, 0.25, 0.3))
+        out.append((sphere("Cap", cap, c + Vector((0, 0.005, 0.06)) * s, 0.104 * s, (0.95, 1.03, 0.55)), "head"))
+        out.append((boxp("CapBrim", cap, c + Vector((0, -0.11, 0.055)) * s, Vector((0.14, 0.07, 0.01)) * s, rot=(-0.15, 0, 0)), "head"))
+        # Long-handled jhadu held in the right hand, its head on the floor in front.
+        top = p["hand.R"] + Vector((0, 0, 0.3)) * s
+        foot = Vector((-0.3, -0.42, 0.1)) * s
+        out.append((rod("BroomHandle", mat("Bamboo", (0.6, 0.5, 0.3)), top, foot, 0.013 * s, 8), "hand.R"))
+        bristle = mat("Bristle", (0.55, 0.45, 0.25), 0.9)
+        out.append((part(bpy.ops.mesh.primitive_cone_add, "BroomHead", bristle, foot + Vector((-0.02, -0.04, -0.04)) * s,
+                         (1.0, 0.3, 1.0), (0.35, 0, 0), radius1=0.16 * s, radius2=0.03 * s, depth=0.2 * s, vertices=12), "hand.R"))
+        return out
     return person("npc_sweeper", (0.32, 0.34, 0.35), (0.3, 0.32, 0.33), SKIN[2], (0.05, 0.05, 0.05),
                   height=1.66, extras=kit)
 
@@ -396,12 +536,14 @@ def preview():
     roots = [fn() for fn in PEOPLE]
     for i, r in enumerate(roots):
         r.location = (i * 0.9 - 1.35, 0, 0)
-        [c for c in r.children if c.type == "ARMATURE"][0].animation_data.nla_tracks["Walk"].mute = True
+        for t in ("Walk", "Run"):
+            [c for c in r.children if c.type == "ARMATURE"][0].animation_data.nla_tracks[t].mute = True
     walker = npc_commuter_a()
     walker.location = (2.4, 0.6, 0)
     walker.rotation_euler = (0, 0, math.radians(90))  # side-on to the camera
     rig = [c for c in walker.children if c.type == "ARMATURE"][0]
     rig.animation_data.nla_tracks["Idle"].mute = True
+    rig.animation_data.nla_tracks["Run"].mute = True
     scene = bpy.context.scene
     scene.frame_set(7)  # quarter cycle: left leg forward
     scene.render.engine = "BLENDER_WORKBENCH"

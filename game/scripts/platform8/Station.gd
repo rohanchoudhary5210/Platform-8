@@ -21,8 +21,12 @@ const ESC_DROP := 10.0
 const ESC_RUN := 20.0
 const ESC_STEPS := 16
 const GATE_OPEN_DISTANCE := 2.0
+const STAIRS_X := -9.05  # stairwell down the left concourse wall (art/build_props.py stairs: 3.5 m drop, 6 m run)
+const STAIRS_TOP_Z := -5.2
+const STAIRS_DROP := 3.5
+const STAIRS_RUN := 6.0
 const FLICKER_LIGHT := "L5"  # the tube over the train doors
-const MODELS := "res://game/assets/models/%s.gltf"  # built by art/build_props.py
+const MODELS :="res://game/assets/models/%s.gltf"  # built by art/build_props.py
 ## Tiled surfaces (art/build_textures.py): colour -> [texture, tint]. Each texture covers 1.2 m, mapped world-space.
 const SURFACES := {
 	WALL: ["wall_tile", Color(0.8, 0.8, 0.76)],
@@ -36,6 +40,7 @@ var spawn: Marker3D
 var props: Node3D
 var lights: Node3D
 var decision: StringName = &"train"
+var current_name := ""  # this loop's station, for anomalies that need it
 
 var _line_mat := StandardMaterial3D.new()
 var _number: Label3D
@@ -59,6 +64,7 @@ func _ready() -> void:
 	_build_platform()
 	_build_props()
 	_build_lights()
+	_build_train_insides()
 	_build_decisions()
 
 ## Called at the start of every loop, before an anomaly is applied.
@@ -68,12 +74,26 @@ func show_station(station_name: String, count: int, line_colour: Color, next_nam
 	_number.text = "STATION %d / 8" % count
 	_line_mat.albedo_color = line_colour
 	props.get_node("TrainBoards/Forward").text = "▶  " + next_name.to_upper()
+	current_name = station_name
+	for led in props.get_node("CoachDisplays/Forward").find_children("Display*", "Label3D", false, false):
+		led.text = "AGLA STATION\n%s  ▶" % next_name.to_upper()
+	for led in props.get_node("CoachDisplays/Opposite").find_children("Display*", "Label3D", false, false):
+		led.text = "AGLA STATION\n◀  TERMINUS"
 	props.get_node("TokenMachine").set_route(station_name, next_name)
 
 func set_exit_open(open: bool) -> void:
 	_exit_barrier.use_collision = not open
 	_exit_barrier.visible = not open
 	_exit_label.text = "EXIT" if open else "EXIT CLOSED"
+
+## Rules notice text (Lang). Game sets it every loop before the anomaly, so #46 lies in the current language.
+func set_rules(text: String) -> void:
+	props.get_node("RulesBoard/Text").text = text
+	props.get_node("RulesBoard/Header").text = Lang.t("notice")
+
+## The "STATION n / 8" sign over the passage. Hidden in hardcore mode.
+func set_counter_visible(v: bool) -> void:
+	_number.visible = v
 
 ## Which decision point is live this loop: &"train", &"escalator" or &"gates".
 func set_decision(dp: StringName) -> void:
@@ -84,6 +104,10 @@ func set_decision(dp: StringName) -> void:
 	for f in _door_fill:
 		f.visible = dp != &"train"
 		f.use_collision = dp != &"train"
+
+## A danger anomaly that starts before the sticker counts as reaching the decision point.
+func arm() -> void:
+	_armed = true
 
 ## State of everything an anomaly may touch. Used by tests to prove revert() is exact.
 func snapshot() -> Dictionary:
@@ -142,7 +166,7 @@ func _flicker(delta: float) -> void:
 
 func _build_concourse() -> void:
 	var g := _node("Concourse", self)
-	_box(g, Vector3(20, 0.5, 20), Vector3(0, -0.25, -10), FLOOR)
+	_build_stairs(_box(g, Vector3(20, 0.5, 20), Vector3(0, -0.25, -10), FLOOR))
 	_box(g, Vector3(20, 0.5, 20), Vector3(0, 3.65, -10), CEILING)
 	_box(g, Vector3(0.5, 4.5, 20), Vector3(-10.25, 2, -10), WALL)
 	_box(g, Vector3(0.5, 4.5, 20), Vector3(10.25, 2, -10), WALL)
@@ -174,6 +198,123 @@ func _build_concourse() -> void:
 	spawn.name = "Spawn"
 	spawn.position = Vector3(0, 1.0, -3)
 	add_child(spawn)
+
+## A flight of stairs down the left wall to a shuttered subway (#34 swaps in a flight with more steps).
+## The steps are art/build_props.py's stairs model; walking uses a plain ramp under them.
+func _build_stairs(floor: CSGBox3D) -> void:
+	var g := _node("Stairwell", self)
+	var top := Vector3(STAIRS_X, 0, STAIRS_TOP_Z)
+	var bottom_z := STAIRS_TOP_Z - STAIRS_RUN
+	var end_z := bottom_z - 2.3
+	var mid_z := (STAIRS_TOP_Z + end_z) / 2.0
+	var hole := CSGBox3D.new()
+	hole.operation = CSGShape3D.OPERATION_SUBTRACTION
+	hole.size = Vector3(1.7, 0.6, STAIRS_TOP_Z - end_z)
+	hole.position = Vector3(STAIRS_X, -0.25, mid_z) - floor.position
+	floor.add_child(hole)
+	for x in [STAIRS_X - 0.95, STAIRS_X + 0.95]:
+		_box(g, Vector3(0.2, 4.0, STAIRS_TOP_Z - end_z), Vector3(x, -2.0, mid_z), WALL)
+	_box(g, Vector3(1.7, 0.5, 2.3), Vector3(STAIRS_X, -STAIRS_DROP - 0.25, bottom_z - 1.15), FLOOR)
+	_box(g, Vector3(2.1, 4.0, 0.2), Vector3(STAIRS_X, -2.0, end_z - 0.1), WALL)
+	# Rolling shutter at the bottom: why the stairs lead nowhere.
+	_box(g, Vector3(1.5, 2.6, 0.05), Vector3(STAIRS_X, -STAIRS_DROP + 1.3, end_z + 0.03), Color(0.55, 0.56, 0.58), false)
+	for i in 12:
+		_box(g, Vector3(1.5, 0.02, 0.02), Vector3(STAIRS_X, -STAIRS_DROP + 0.2 + i * 0.2, end_z + 0.06), DARK, false)
+	_label(g, "SUBWAY CLOSED
+Subway band hai", Vector3(STAIRS_X, -STAIRS_DROP + 2.85, end_z + 0.05), 0, 28).modulate = Color(1.0, 0.8, 0.3)
+	var ramp := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	var tilt := -atan2(STAIRS_DROP, STAIRS_RUN)
+	box.size = Vector3(1.6, 0.2, Vector2(STAIRS_RUN, STAIRS_DROP).length() + 0.1)
+	shape.shape = box
+	shape.rotation.x = tilt
+	shape.position = Vector3(STAIRS_X, -STAIRS_DROP / 2.0, STAIRS_TOP_Z - STAIRS_RUN / 2.0) 			- Vector3(0, cos(tilt), sin(tilt)) * 0.1  # top face on the step nosings
+	ramp.add_child(shape)
+	# Railing round the hole on the concourse side; the collider stops you stepping off the edge.
+	var rail_x := STAIRS_X + 0.85
+	for r: Array in [[Vector3(rail_x, 0, mid_z), Vector3(0.05, 0, STAIRS_TOP_Z - end_z)],
+			[Vector3(STAIRS_X, 0, end_z), Vector3(1.7, 0, 0.05)]]:
+		_box(g, r[1] + Vector3(0, 0.05, 0), r[0] + Vector3(0, 1.0, 0), STEEL, false)
+		var guard := CollisionShape3D.new()
+		var gb := BoxShape3D.new()
+		gb.size = r[1] + Vector3(0, 1.2, 0)
+		guard.shape = gb
+		guard.position = r[0] + Vector3(0, 0.6, 0)
+		ramp.add_child(guard)
+	for z in range(0, 5):
+		_box(g, Vector3(0.05, 1.0, 0.05), Vector3(rail_x, 0.5, STAIRS_TOP_Z - z * (STAIRS_TOP_Z - end_z) / 4.0), STEEL, false)
+	g.add_child(ramp)
+	_box(self, Vector3(0.05, 0.36, 1.3), Vector3(-9.97, 2.6, STAIRS_TOP_Z - 0.8), DARK, false)
+	_label(self, "SUBWAY  ↓", Vector3(-9.94, 2.6, STAIRS_TOP_Z - 0.8), PI / 2, 40).modulate = Color(1.0, 0.85, 0.3)
+	var lamp := OmniLight3D.new()  # not in Lights/: the light anomalies leave the stairwell alone, like the street
+	lamp.position = Vector3(STAIRS_X, -1.0, bottom_z - 1.0)
+	lamp.omni_range = 4.5
+	lamp.light_energy = 0.6
+	lamp.light_color = LIGHT_COLOUR
+	g.add_child(lamp)
+	# Props/Stairs holds both flights; Extra stays hidden unless anomaly #34 swaps it in.
+	var stairs := _node("Stairs", props)
+	stairs.position = top
+	_model("stairs", stairs, "Normal", Vector3.ZERO)
+	_model("stairs_extra", stairs, "Extra", Vector3.ZERO).visible = false
+
+## Inside the two parked trains, seen through the glass screen doors and the coach windows:
+## Props/Passengers/<Forward|Opposite> (rush hour), Props/Drivers/<...> (in the front cab of each train),
+## Props/CoachDisplays/<...> (destination LED in each coach's middle window). Forward runs -Z, opposite +Z.
+func _build_train_insides() -> void:
+	var y := -ESC_DROP
+	var crowd := _node("Passengers", props)
+	var drivers := _node("Drivers", props)
+	var displays := _node("CoachDisplays", props)
+	var models := ["npc_commuter_a", "npc_commuter_b"]
+	# Standing spots in a coach (x across, z along) and which way each faces.
+	var spots := [[-0.45, -4.2, 0.4], [0.5, -0.9, 2.6], [-0.3, 1.4, -1.2], [0.4, 5.3, PI]]
+	for side in [1, -1]:
+		var n := "Forward" if side == 1 else "Opposite"
+		var group := _node(n, crowd)
+		var screens := _node(n, displays)
+		for c in 2:
+			var cz: float = [-77.5, -97.8][c]
+			for i in spots.size():
+				var who := _model(models[(i + c + (1 if side < 0 else 0)) % 2], group, "P%d_%d" % [c, i],
+					Vector3(side * 7 + spots[i][0], y, cz + spots[i][1] * side), spots[i][2])
+				NpcWalker.play(who, &"Idle", (i * 0.9 + c) * (1.0 if side > 0 else 1.7))
+			var lamp := OmniLight3D.new()  # coach lighting; not in Lights/, so the light anomalies leave it alone
+			lamp.position = Vector3(side * 7, y + 2.3, cz)
+			lamp.omni_range = 7.0
+			lamp.light_energy = 0.7
+			lamp.light_color = Color(1.0, 0.97, 0.9)
+			add_child(lamp)
+			# Destination LED board in the top of the middle window on the platform side, facing out.
+			_box(screens, Vector3(0.03, 0.3, 1.3), Vector3(side * 5.58, y + 1.58, cz), Color(0.02, 0.02, 0.025), false)
+			var led := _label(screens, "", Vector3(side * 5.555, y + 1.58, cz), -PI / 2 if side == 1 else PI / 2, 22)
+			led.name = "Display%d" % c
+			led.modulate = Color(1.0, 0.35, 0.15)
+		# Front cab: a partition with a window, a console and the driver looking ahead.
+		var front: float = -107.8 if side == 1 else -67.5
+		var cab := _node(n + "Cab", self)
+		var wall_z: float = front + 1.6 * side
+		for x in [-1.05, 1.05]:
+			_box(cab, Vector3(0.9, 2.5, 0.06), Vector3(side * 7 + x, y + 1.25, wall_z), Color(0.75, 0.76, 0.78), false)
+		_box(cab, Vector3(1.2, 0.9, 0.06), Vector3(side * 7, y + 2.05, wall_z), Color(0.75, 0.76, 0.78), false)
+		_box(cab, Vector3(1.2, 1.0, 0.06), Vector3(side * 7, y + 0.5, wall_z), Color(0.75, 0.76, 0.78), false)
+		_box(cab, Vector3(2.4, 1.0, 0.5), Vector3(side * 7, y + 0.5, front + 0.35 * side), DARK, false)
+		var cab_lamp := OmniLight3D.new()
+		cab_lamp.position = Vector3(side * 7, y + 2.2, front + 0.9 * side)
+		cab_lamp.omni_range = 3.0
+		cab_lamp.light_energy = 0.9
+		cab.add_child(cab_lamp)
+		var driver := _node(n, drivers)
+		_model("npc_guard", driver, "Model", Vector3(side * 7 + 0.4, y, front + 0.95 * side), 0.0 if side == -1 else PI)
+		NpcWalker.play(driver, &"Idle", 0.7)
+
+func _glass() -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = Color(0.55, 0.68, 0.72, 0.18)
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.roughness = 0.1
+	return m
 
 ## Behind the exit gate: a corridor out to a night street. Its lights are not in Lights/, so anomalies leave it alone.
 func _build_street() -> void:
@@ -254,10 +395,17 @@ func _build_platform() -> void:
 		_box(g, Vector3(0.5, 7, 50), Vector3(side * 10.25, y + 1.5, -85), WALL)
 		var stripe := _box(g, Vector3(0.05, 0.4, 50), Vector3(side * 9.98, y + 2.5, -85), Color.WHITE, false)
 		stripe.material = _line_mat
-		# Platform screen doors with one door at z = -85, closed unless the train is the decision point.
-		_box(g, Vector3(0.2, 2.2, 23), Vector3(side * 4.1, y + 1.1, -71.5), STEEL)
-		_box(g, Vector3(0.2, 2.2, 23), Vector3(side * 4.1, y + 1.1, -98.5), STEEL)
-		_door_fill.append(_box(g, Vector3(0.12, 2.2, 4), Vector3(side * 4.1, y + 1.1, -85), Color(0.55, 0.6, 0.65)))
+		# Glass platform screen doors with one door at z = -85, closed unless the train is the decision point.
+		# Glass so you can look into the coaches (passengers, display, driver) before you choose.
+		for z in [-71.5, -98.5]:
+			_box(g, Vector3(0.12, 2.2, 23), Vector3(side * 4.1, y + 1.1, z), STEEL).material = _glass()
+			_box(g, Vector3(0.2, 0.25, 23), Vector3(side * 4.1, y + 0.125, z), STEEL, false)  # kick plate
+			_box(g, Vector3(0.2, 0.12, 23), Vector3(side * 4.1, y + 2.2, z), STEEL, false)  # header
+			for k in 6:
+				_box(g, Vector3(0.14, 2.2, 0.08), Vector3(side * 4.1, y + 1.1, z - 11.5 + k * 4.6), STEEL, false)
+		var fill := _box(g, Vector3(0.1, 2.2, 4), Vector3(side * 4.1, y + 1.1, -85), STEEL)
+		fill.material = _glass()
+		_door_fill.append(fill)
 		_box(g, Vector3(1.4, 0.5, 4), Vector3(side * 4.8, y - 0.25, -85), FLOOR)
 		# Two coaches (visual only; the choice fires as soon as you step through the door).
 		# Coach origin is rail top, floor 1.15 m above it = platform level; a coach door lines up with z = -85.
@@ -284,6 +432,41 @@ func _build_props() -> void:
 	_box(poster, Vector3(1.4, 1.9, 0.04), Vector3.ZERO, Color(0.95, 0.9, 0.75), false)
 	_box(poster, Vector3(0.3, 0.3, 0.05), Vector3(-0.45, 0.65, 0.01), Color(0.8, 0.1, 0.1), false)
 	_label(poster, "SAFE TRAVEL →\nKEEP LEFT\nMIND THE GAP", Vector3(0, -0.2, 0.04), 0, 36).modulate = Color.BLACK
+	# The ad model's face. Normally gazing up and to the right; #38 makes the eyes follow you.
+	var poster_face := _node("Face", poster)
+	poster_face.position = Vector3(0.2, 0.55, 0.022)
+	_disc(poster_face, 0.28, Vector3.ZERO, Color(0.82, 0.62, 0.48))
+	for x in [-0.1, 0.1]:
+		_disc(poster_face, 0.075, Vector3(x, 0.06, 0.004), Color.WHITE)
+		var pupil := _disc(poster_face, 0.036, Vector3(x + 0.025, 0.085, 0.008), Color(0.08, 0.06, 0.05))
+		pupil.name = "PupilL" if x < 0 else "PupilR"
+		pupil.set_meta("centre", Vector3(x, 0.06, 0.008))
+	_box(poster_face, Vector3(0.16, 0.025, 0.01), Vector3(0, -0.12, 0.004), Color(0.6, 0.15, 0.15), false)
+
+	# Ad screen on the front wall, right of the passage. The camera-feed anomaly shows you on it instead.
+	var ad := _node("AdScreen", props)
+	ad.position = Vector3(5.0, 2.2, -19.94)
+	_box(ad, Vector3(1.7, 1.0, 0.06), Vector3.ZERO, DARK, false)
+	var ad_panel := _node("Ad", ad)
+	var glow := _box(ad_panel, Vector3(1.56, 0.86, 0.02), Vector3(0, 0, 0.035), Color(0.1, 0.3, 0.6), false)
+	glow.material.emission_enabled = true  # a lit screen, not paper
+	glow.material.emission = Color(0.1, 0.3, 0.6)
+	_label(ad_panel, "METRO SMART CARD\nRecharge karo · 10% bachao", Vector3(0, 0, 0.05), 0, 22)
+
+	# Rules notice on a stand just ahead of the spawn, angled towards the walking line: teaches loop 1.
+	var rules := _node("RulesBoard", props)
+	rules.position = Vector3(-2.3, 0, -6.5)
+	rules.rotation.y = 0.35
+	for x in [-0.7, 0.7]:
+		_box(rules, Vector3(0.06, 1.0, 0.06), Vector3(x, 0.5, 0), STEEL)
+	_box(rules, Vector3(1.6, 1.3, 0.05), Vector3(0, 1.6, 0), Color(0.95, 0.94, 0.9))
+	_box(rules, Vector3(1.6, 0.3, 0.06), Vector3(0, 2.4, 0), Color(0.1, 0.2, 0.45), false)
+	_label(rules, Lang.t("notice"), Vector3(0, 2.4, 0.04), 0, 30).name = "Header"
+	var text := _label(rules, Lang.t("rules"), Vector3(0, 1.58, 0.03), 0, 18)
+	text.name = "Text"
+	text.modulate = Color(0.08, 0.08, 0.1)
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.width = 1.45 / text.pixel_size  # keep inside the 1.6 m panel
 
 	var ext := _model("fire_extinguisher", props, "FireExtinguisher", Vector3(1.84, 0.35, -28), -PI / 2)
 	# Body and dome share one material, so recolouring Body (anomaly #5) recolours both.
@@ -357,6 +540,13 @@ func _build_props() -> void:
 	puddle.material = _mat(Color(0.25, 0.4, 0.6))
 	puddle.visible = false
 	cooler.add_child(puddle)
+	# Flood water (#42): hidden at the bottom of the track pits until the anomaly raises it.
+	var flood := _box(props, Vector3(20, 0.05, 50), Vector3(0, -ESC_DROP - 1.45, -85), Color(0.07, 0.09, 0.08), false)
+	flood.name = "Flood"
+	flood.material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	flood.material.albedo_color.a = 0.85
+	flood.material.roughness = 0.05
+	flood.visible = false
 
 	var clock := _node("Clock", props)
 	clock.position = Vector3(-4.5, 2.3, -19.97)
@@ -538,6 +728,18 @@ func _box(parent: Node, size: Vector3, pos: Vector3, c: Color, collide := true) 
 	b.material = _mat(c)
 	parent.add_child(b)
 	return b
+
+## Flat disc facing +Z (posters).
+func _disc(parent: Node, radius: float, pos: Vector3, c: Color) -> CSGCylinder3D:
+	var d := CSGCylinder3D.new()
+	d.radius = radius
+	d.height = 0.004
+	d.sides = 24
+	d.position = pos
+	d.rotation.x = PI / 2
+	d.material = _mat(c)
+	parent.add_child(d)
+	return d
 
 func _label(parent: Node, text: String, pos: Vector3, yaw: float, size: int) -> Label3D:
 	var l := Label3D.new()

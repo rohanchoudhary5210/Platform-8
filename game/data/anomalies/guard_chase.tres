@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AnomalyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/AnomalyData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"guard_chase"
+display_name = "Guard blocks the gates and charges"
+category = &"danger"
+tier = 2
+location = &"concourse"
+max_decision_reach = 0
+script_path = "res://game/scripts/platform8/anomalies/GuardChase.gd"
+slot_name = NodePath("Props/People/Guard")

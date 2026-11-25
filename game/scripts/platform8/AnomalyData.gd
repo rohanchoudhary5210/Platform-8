@@ -19,6 +19,9 @@ const ROUTE: Array[StringName] = [&"concourse", &"passage", &"escalator", &"plat
 ## Route section where the player first sees it (see ROUTE).
 @export var location: StringName = &"concourse"
 @export_file("*.gd") var script_path: String
+## Furthest decision point (as a ROUTE index) this anomaly works with. Danger anomalies whose escape
+## needs the decision point close by lower it, e.g. 0 = only with the gates decision.
+@export_range(0, 3) var max_decision_reach: int = 3
 ## Node inside Station that apply()/revert() receive ("." = the Station, "../HUD/X" = a HUD label).
 @export var slot_name: NodePath
 ## Extra settings for data-driven scripts like SetProperty.

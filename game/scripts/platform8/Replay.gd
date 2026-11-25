@@ -81,7 +81,7 @@ func play(anomaly: AnomalyData, slot: Node, fov: float) -> void:
 		_target = null
 		_title.text = "There was no anomaly."
 		_overlay.queue_redraw()
-		await get_tree().create_timer(LENGTH).timeout
+		await get_tree().create_timer(LENGTH, false).timeout  # false: the pause menu stops the replay
 	else:
 		_target = focus_of(slot)
 		_title.text = "REPLAY   ·   you missed: %s" % anomaly.display_name
@@ -95,6 +95,8 @@ func play(anomaly: AnomalyData, slot: Node, fov: float) -> void:
 				_cam.global_transform = _sample_at(t)
 			_overlay.queue_redraw()
 			await get_tree().process_frame
+			if get_tree().paused:
+				continue  # process_frame still fires while paused: hold the frame
 			t += get_process_delta_time()
 	_overlay.visible = false
 	playing = false

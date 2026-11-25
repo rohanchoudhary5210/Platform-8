@@ -4,7 +4,7 @@ extends Node3D
 ## Token vending machine on the concourse's left wall. Look at it and press E: a token drops into the tray.
 ## Model: art/build_props.py token_machine (front is local +Z). Anomaly #23 makes it dispense on its own.
 
-const PROMPT := "[E]  Buy token  ·  ₹ 20"
+const PROMPT := "[E / A]  Buy token  ·  ₹ 20"
 const TRAY_SIZE := 5  # after this, tokens spill onto the floor
 const SLOT := Vector3(0, 0.5, 0.31)
 const TRAY := Vector3(0, 0.45, 0.33)
@@ -25,7 +25,7 @@ class Token extends MeshInstance3D:
 		add_child(body)
 
 	func prompt() -> String:
-		return "[E]  Take token"
+		return "[E / A]  Take token"
 
 	func interact(by: Node) -> void:
 		by.tokens += 1

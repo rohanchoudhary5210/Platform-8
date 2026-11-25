@@ -15,6 +15,8 @@ var clears := 0             # times the player got out
 var best_time := 0.0        # fastest clear in seconds, 0 = none yet
 var mouse_sensitivity := 1.0
 var volume_db := 0.0
+var hardcore := false  # no station counter, no decision hints
+var language := "en"   # Lang.CODES
 
 static func open(p: String = PATH) -> SaveData:
 	var s := SaveData.new()
@@ -29,6 +31,9 @@ static func open(p: String = PATH) -> SaveData:
 	s.best_time = float(cfg.get_value("progress", "best_time", 0.0))
 	s.mouse_sensitivity = clampf(float(cfg.get_value("settings", "mouse_sensitivity", 1.0)), 0.2, 3.0)
 	s.volume_db = clampf(float(cfg.get_value("settings", "volume_db", 0.0)), -40.0, 6.0)
+	s.hardcore = bool(cfg.get_value("settings", "hardcore", false))
+	var lang := str(cfg.get_value("settings", "language", "en"))
+	s.language = lang if lang in Lang.CODES else "en"
 	return s
 
 func write() -> Error:
@@ -40,6 +45,8 @@ func write() -> Error:
 	cfg.set_value("progress", "best_time", best_time)
 	cfg.set_value("settings", "mouse_sensitivity", mouse_sensitivity)
 	cfg.set_value("settings", "volume_db", volume_db)
+	cfg.set_value("settings", "hardcore", hardcore)
+	cfg.set_value("settings", "language", language)
 	return cfg.save(path)
 
 ## Found anomalies that still exist in this build (old saves may list removed ones).

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AnomalyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/AnomalyData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"endless_escalator"
+display_name = "Escalator never reaches the bottom"
+category = &"spatial"
+tier = 3
+location = &"escalator"
+script_path = "res://game/scripts/platform8/anomalies/EndlessEscalator.gd"
+max_decision_reach = 2
+slot_name = NodePath("Props/EscalatorSteps")

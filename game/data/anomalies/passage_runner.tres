@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="AnomalyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/AnomalyData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"passage_runner"
+display_name = "Someone runs at you from the passage"
+category = &"danger"
+tier = 3
+location = &"concourse"
+script_path = "res://game/scripts/platform8/anomalies/GuardChase.gd"
+max_decision_reach = 0
+slot_name = NodePath("Props/People/CommuterB")
+params = {
+"run": 4.5,
+"start": Vector3(0, 0, -30),
+"trigger_z": -10.0
+}

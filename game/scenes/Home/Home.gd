@@ -27,7 +27,10 @@ func _on_ready() -> void:
 	if _logger:
 		_logger.info("HomeScene loaded successfully.")
 	
-	build_lost_and_found(SaveData.open(save_path))
+	var save := SaveData.open(save_path)
+	Lang.code = save.language
+	sub_label.text = Lang.t("home")
+	build_lost_and_found(save)
 
 ## Tests point this at a scratch file.
 var save_path := SaveData.PATH
@@ -73,3 +76,13 @@ const GAME_SCENE := "res://game/scenes/gameplay/Game.tscn"
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_accept") and _scene:
 		_scene.go_to(GAME_SCENE)
+	elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_L:
+		toggle_language()
+
+## L on the home screen: next language, saved for the game too.
+func toggle_language() -> void:
+	var save := SaveData.open(save_path)
+	save.language = Lang.next(save.language)
+	save.write()
+	Lang.code = save.language
+	sub_label.text = Lang.t("home")

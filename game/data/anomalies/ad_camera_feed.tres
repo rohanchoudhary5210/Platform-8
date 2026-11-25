@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="AnomalyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/scripts/platform8/AnomalyData.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+id = &"ad_camera_feed"
+display_name = "Ad screen shows you from behind"
+category = &"reactive"
+tier = 2
+location = &"concourse"
+script_path = "res://game/scripts/platform8/anomalies/AdFeed.gd"
+slot_name = NodePath("Props/AdScreen")

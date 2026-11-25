@@ -5,14 +5,20 @@ First-person anomaly-spotting game set in a looping underground metro station (f
 ## Run it
 
 1. Open this folder in Godot 4.7 and press **F5**.
-2. On the title screen press **Enter**.
+2. On the title screen press **Enter** (or **L** to switch the language first).
 
-| Control | Key |
-|---|---|
-| Walk | W A S D or arrow keys |
-| Look | Mouse |
-| Free the mouse | Esc (click to capture it again) |
-| Use: buy a token at the machine, pick a token up | E, while looking at it |
+| Control | Keyboard and mouse | Gamepad |
+|---|---|---|
+| Walk | W A S D or arrow keys | Left stick |
+| Look | Mouse | Right stick |
+| Use: buy a token at the machine, pick a token up | E, while looking at it | A |
+| Pause menu | Esc (click to capture the mouse again after) | Start |
+| Menus | Mouse, arrows + Enter | D-pad / left stick + A |
+
+**Pause menu**: Resume, Restart run, Hardcore, Language, Quit to home. Settings are saved straight away.
+
+- **Hardcore (no HUD)**: hides the station counter (the top-left HUD and the `STATION n / 8` sign) and the decision-point hint at the top. You have to remember where you are and read the yellow stickers yourself. The HUD-counter anomaly is never picked in hardcore, since you couldn't see it.
+- **Language**: English or Hindi (Devanagari) for the HUD hints, the rules notice, the menus and the ending screen. The PA stays bilingual, like the real metro. Hindi uses the system's Devanagari font (Nirmala UI on Windows).
 
 ## The rules
 
@@ -29,7 +35,7 @@ Each loop has 0 or 1 anomaly. If you saw **nothing wrong**, take the **forward**
 
 The title screen shows the **Lost & Found** board: one card per anomaly. An anomaly is "found" the first time you call it right, and its card then shows its name and category. The rest stay `? ? ?`. Above the board: best station reached, number of clears and fastest clear.
 
-Everything is in one save file, `%APPDATA%\Godot\app_userdata\Platform 8\platform8_save.cfg`: found anomalies, best station, clears, best time, mouse sensitivity and volume. Delete it to reset. Tests use a separate scratch file, so they never touch it.
+Everything is in one save file, `%APPDATA%\Godot\app_userdata\Platform 8\platform8_save.cfg`: found anomalies, best station, clears, best time, and the settings (mouse sensitivity, volume, hardcore, language). Delete it to reset. Tests use a separate scratch file, so they never touch it.
 
 The **first loop is always clean**, so the first right answer is always forward.
 
@@ -55,16 +61,19 @@ Learn this on loop 1. It's what you compare against every time after.
 
 | What | Normal |
 |---|---|
+| Notice board on a stand, just ahead on your left | `PASSENGER NOTICE` in white on blue, then the rules in 7 black lines (`Nothing unusual: go FORWARD.` / `Something unusual: turn **BACK**.` …) |
 | Sign over the passage opening | Station name in white capitals, `STATION n / 8` under it (and the same name in the top-left HUD) |
 | Clock, front wall left of the opening | Red second hand going **clockwise** |
+| Screen, front wall right of the opening | Blue ad: `METRO SMART CARD` / `Recharge karo · 10% bachao` |
 | Yellow tactile strip on the floor, spawn → gates | Yellow all the way |
-| Left wall | Blue token machine by the start (screen shows `<this station> → <next>`, **tray empty**; press E to buy a token, E again on the token to pick it up; the gates take it as you walk through), lit cream poster (**red square top-left**, `SAFE TRAVEL →` / `KEEP LEFT` / `MIND THE GAP`), water cooler near the gates with a **dry floor** |
+| Left wall | Blue token machine by the start (screen shows `<this station> → <next>`, **tray empty**; press E to buy a token, E again on the token to pick it up; the gates take it as you walk through), lit cream poster (**red square top-left**, a smiling face **gazing up and to the right**, `SAFE TRAVEL →` / `KEEP LEFT` / `MIND THE GAP`), water cooler near the gates with a **dry floor**. Between the token machine and the poster, a railed stairwell (`SUBWAY ↓` sign) goes down to a closed shutter: **20 steps**, each with a yellow edge strip |
 | Right wall | Green `EXIT →` sign (points back towards the real exit behind you), **closed** lift doors, a **green dustbin on this wall** near the start |
 | Ceiling, just before the gates | **Two** CCTV cameras, one each side |
 | AFC gates | Red flaps **closed**; they open only when you walk up to them |
-| People | A **security guard** standing right of the gates, facing you; a **sweeper** in an orange vest on the left, half turned away; a commuter with a backpack **pacing up and down** the right side. Everyone breathes and looks around a little |
+| People | A **security guard** standing right of the gates, facing you; a **sweeper** in an orange vest on the left, half turned away, who **never moves from his spot**; a commuter with a backpack **pacing up and down** the right side. Everyone breathes and looks around a little |
 | Lights | Dim, pale greenish |
 | PA subtitle on arrival | `Yeh <name> station hai. This is <name>.` |
+| Sound | Your own footsteps, the hum, the rumble. **Nothing walks behind you** |
 
 **Passage**
 
@@ -75,6 +84,7 @@ Learn this on loop 1. It's what you compare against every time after.
 | Ceiling tube | Steady (the one over the train doors is the flickery one) |
 | Left wall | Blank wall, no door, silent |
 | Ceiling height | Same as the concourse opening |
+| People and length | **Empty**. About 20 m: you pass the `PLATFORM` sign **once** and the escalator starts |
 
 **Escalator and platform**
 
@@ -84,6 +94,10 @@ Learn this on loop 1. It's what you compare against every time after.
 | Board at the escalator bottom | Amber `NEXT TRAIN   2 MIN` |
 | Floor sticker by the right door | `MIND THE GAP`, stops at the platform edge |
 | Train behind the right door | Destination `▶ <next station>` |
+| Screen doors | **Glass**: you can see into both parked trains |
+| Inside both trains | Lit, **people standing** in every coach (rush hour) |
+| Destination LED in each coach's middle window | Forward train: `AGLA STATION` / `<next station> ▶`. Opposite train: `◀ TERMINUS` |
+| Front of the forward train | Walk to the far end of the platform: the **driver** stands in the cab behind the last window |
 | Platform far end | Lit, station name on the end wall |
 | People | A commuter with a backpack on the left facing the OPPOSITE doors; one in a maroon kurta further down on the right, facing along the platform |
 
@@ -91,7 +105,7 @@ Always there and **never an anomaly**: the flickering tube over the train doors,
 
 ## Anomaly solutions
 
-All of these mean: **take the BACK choice.** Tier sets when they can appear: **Subtle** from station 0, **Creepy** from station 4, **Intense** from station 7.
+All of these mean: **take the BACK choice.** Tier sets when they can appear: **Subtle** from station 0, **Creepy** from station 4, **Intense** from station 7. Once every anomaly of your tier has been shown in a run, the game borrows an unshown one from the next tier up; it only repeats once nothing unshown fits the loop.
 
 ### Subtle (stations 0 and up)
 
@@ -112,37 +126,55 @@ All of these mean: **take the BACK choice.** Tier sets when they can appear: **S
 | 13 | Tube flickers in a rhythm | Passage ceiling | Off-on-off-on at a perfectly steady beat (not random like the door tube) |
 | 14 | Clock runs backwards | Concourse, front wall | Second hand goes **anticlockwise** |
 | 15 | Next train: 88 min | Board at the escalator bottom | `NEXT TRAIN  88 MIN` |
+| 16 | Empty coaches at rush hour | Forward train, through the windows | **Nobody** in the forward train; the opposite one is still full |
+| 17 | Coach display shows the wrong direction | Forward train's window LEDs | They read `◀ TERMINUS`, the opposite train's text |
 
 ### Creepy (stations 4 and up)
 
 | # | Anomaly | Where | Tell |
 |---|---|---|---|
-| 16 | Mind the gap too long | Platform floor by the right door | Sticker stretches **past the platform edge** over the track |
-| 17 | PA says your name | Arrival subtitle | An extra line: `<your Windows user name>, aap yahin rahenge.` |
-| 18 | Phone in the wall | Passage, left wall | A phone **rings from the blank wall**; caption `[ a phone is ringing inside the wall ]` |
-| 19 | Lift doors | Concourse, right wall | Lift doors **open and close** on their own with a ding |
-| 20 | Dark platform end | Platform | The far third of the platform is **unlit** |
-| 21 | New door | Passage, left wall | A brown staff **door** where there was blank wall |
-| 22 | Low ceiling | Passage | Ceiling and tube light are much **lower**, almost touching your head |
-| 23 | Train has no destination | Train behind the right door | Destination board is **blank** |
-| 24 | Guard watches you | Concourse, by the gates | The guard **turns to face you** and slowly follows you around the concourse |
-| 25 | Everyone faces one wall | Concourse and platform | The guard, the sweeper and both commuters all stand **facing the right-hand wall** |
-| 26 | Token machine won't stop | Concourse, left wall by the start | Tokens keep **dropping on their own** with a clatter, filling the tray and spilling over the floor |
-| 27 | Everyone freezes | Concourse (and platform) | The pacing commuter **stops mid-step** and nobody moves at all, not even breathing |
+| 18 | Mind the gap too long | Platform floor by the right door | Sticker stretches **past the platform edge** over the track |
+| 19 | PA says your name | Arrival subtitle | An extra line: `<your Windows user name>, aap yahin rahenge.` |
+| 20 | Phone in the wall | Passage, left wall | A phone **rings from the blank wall**; caption `[ a phone is ringing inside the wall ]` |
+| 21 | Lift doors | Concourse, right wall | Lift doors **open and close** on their own with a ding |
+| 22 | Dark platform end | Platform | The far third of the platform is **unlit** |
+| 23 | New door | Passage, left wall | A brown staff **door** where there was blank wall |
+| 24 | Low ceiling | Passage | Ceiling and tube light are much **lower**, almost touching your head |
+| 25 | Train has no destination | Train behind the right door | Destination board is **blank** |
+| 26 | Guard watches you | Concourse, by the gates | The guard **turns to face you** and slowly follows you around the concourse |
+| 27 | Everyone faces one wall | Concourse and platform | The guard, the sweeper and both commuters all stand **facing the right-hand wall** |
+| 28 | Token machine won't stop | Concourse, left wall by the start | Tokens keep **dropping on their own** with a clatter, filling the tray and spilling over the floor |
+| 29 | Everyone freezes | Concourse (and platform) | The pacing commuter **stops mid-step** and nobody moves at all, not even breathing |
+| 30 | Guard charges | Concourse, in front of the gates (gates decision only) | **Danger.** The guard stands **in the middle of the walkway** in front of the gates, facing you, instead of off to the right. Get within about 3.5 m and he charges: that counts as reaching the decision point, so **back off towards the spawn** at once. If he reaches you, you're caught |
+| 31 | Poster's eyes follow you | Concourse, left wall | The face on the poster **looks at you** wherever you stand, instead of gazing up and to the right |
+| 32 | Footsteps behind you | Anywhere you walk | A heavier step lands **just after each of yours**, a few metres behind, and stops when you stop. Nobody is there |
+| 33 | Ad screen shows you | Concourse, front wall right of the opening | The ad is gone: a greenish **live camera view from behind you**, a dark figure standing where you stand |
+| 34 | Commuter turns to you | Platform, backpack commuter on the left | Look straight at him and he **turns to face you**; glance away and he's facing the doors again |
+| 35 | Passage too long | Passage | Just past the `PLATFORM` sign you're put back about 8 m: the sign **comes round twice** and the walk takes longer |
+| 36 | Stairs have extra steps | Concourse, the subway stairwell on the left | Same stairs, same depth, but **28 steps** instead of 20: the yellow edge strips are packed noticeably closer |
+| 37 | Forward train has no driver | Far end of the platform, the forward train's cab | The cab is lit but **empty** |
+| 38 | "Agla station" is this station | Forward train's window LEDs | `AGLA STATION` / **`<this station>`** instead of the next one |
+| 39 | A rule has changed | Notice board by the spawn | The 4th rule reads `Something unusual: go FORWARD.` **Don't obey it**: the rules never change, so this is the anomaly. Turn back |
 
 ### Intense (stations 7 and 8)
 
 | # | Anomaly | Where | Tell |
 |---|---|---|---|
-| 28 | HUD counter jumps | Top-left HUD | The count **flickers to `8 / 8`** every few seconds, then back |
-| 29 | Lights die towards you | Everywhere | Lights switch off **one by one** from the platform end towards you, each with a heavy clunk |
+| 40 | Sweeper creeps closer | Concourse, left side | The sweeper is **a step closer every time you look away**, standing still and facing you. Watch him and he never moves |
+| 41 | HUD counter jumps | Top-left HUD | The count **flickers to `8 / 8`** every few seconds, then back |
+| 42 | Lights die towards you | Everywhere | Lights switch off **one by one** from the platform end towards you, each with a heavy clunk |
+| 43 | Platform floods | Platform (train decision only) | **Danger.** Step off the escalator and dark water fills the track pits, then climbs the platform. Get to the **left door** before it reaches your waist (about 15 s), or you're **caught**: it counts as a wrong call |
+| 44 | Someone runs out of the passage | Concourse, seen through the gates (gates decision only) | **Danger.** A man in a maroon kurta stands **deep in the passage**, facing you (the passage is normally empty). Get about halfway to the gates and he sprints at you, faster than the guard: **turn back** at once |
+| 45 | Escalator never ends | Escalator (escalator decision only) | Near the foot you're quietly put back a few steps, over and over: the bottom **never gets closer**. Ride back up to escape |
+
+**Danger anomalies** don't wait for you. If the threat reaches you, it's the same as taking the forward choice: a wrong call, the replay, and back to the same station. Turn back in time and it's a right call like any other.
 
 ### No anomaly
 If everything matches the "normal" tables (up to the decision point), take the **forward** choice.
 
 ## Full anomaly list (GDD)
 
-The GDD's 48-anomaly pool plus its train-side extras. ✅ = in the game now (29), ⏳ = planned.
+The GDD's 48-anomaly pool plus its train-side extras. ✅ = in the game now (45), ⏳ = planned.
 
 | GDD # | Anomaly | Category | Tier | Status |
 |---|---|---|---|---|
@@ -159,7 +191,7 @@ The GDD's 48-anomaly pool plus its train-side extras. ✅ = in the game now (29)
 | 11 | Station name is backwards | Text and signage | Subtle | ✅ |
 | 12 | PA announcement in the wrong language | Audio | Subtle | ⏳ needs PA voice |
 | 13 | PA says the player's name | Audio | Creepy | ✅ (subtitle) |
-| 14 | Footsteps echo late | Audio | Creepy | ⏳ |
+| 14 | Footsteps echo late | Audio | Creepy | ✅ (a few metres behind you) |
 | 15 | Escalator hum stops | Audio | Subtle | ⏳ needs an escalator hum |
 | 16 | A phone rings inside the wall | Audio | Creepy | ✅ |
 | 17 | "Doors will open on the left", then right | Audio | Creepy | ⏳ needs PA voice + train doors |
@@ -178,27 +210,29 @@ The GDD's 48-anomaly pool plus its train-side extras. ✅ = in the game now (29)
 | 30 | Platform end is completely dark | Lighting | Creepy | ✅ |
 | 31 | Emergency lighting is red | Lighting | Subtle | ✅ |
 | 32 | Lights switch off one by one towards you | Danger | Intense | ✅ |
-| 33 | Passage is a few metres longer | Spatial | Creepy | ⏳ |
-| 34 | Stairs have extra steps | Spatial | Creepy | ⏳ needs stairs |
-| 35 | Escalator never reaches the bottom | Spatial | Intense | ⏳ |
+| 33 | Passage is a few metres longer | Spatial | Creepy | ✅ |
+| 34 | Stairs have extra steps | Spatial | Creepy | ✅ |
+| 35 | Escalator never reaches the bottom | Spatial | Intense | ✅ |
 | 36 | A door appears where there was a wall | Spatial | Creepy | ✅ |
 | 37 | Ceiling is lower | Spatial | Creepy | ✅ |
-| 38 | Poster model's eyes follow you | Reactive | Creepy | ⏳ |
-| 39 | Things change only when you look away | Reactive | Intense | ⏳ |
-| 40 | NPC turns to face you when you look | Reactive | Creepy | ⏳ needs NPCs |
-| 41 | Someone runs at you from the passage | Danger | Intense | ⏳ |
-| 42 | Platform floods with water | Danger | Intense | ⏳ |
+| 38 | Poster model's eyes follow you | Reactive | Creepy | ✅ |
+| 39 | Things change only when you look away | Reactive | Intense | ✅ (the sweeper creeps closer) |
+| 40 | NPC turns to face you when you look | Reactive | Creepy | ✅ (platform commuter) |
+| 41 | Someone runs at you from the passage | Danger | Intense | ✅ |
+| 42 | Platform floods with water | Danger | Intense | ✅ |
 | 43 | Clock runs backwards | Time | Subtle | ✅ |
 | 44 | "Next train: 88 min" | Time | Subtle | ✅ |
 | 45 | Crowd freezes mid-step | Time | Creepy | ✅ |
 | 46 | HUD station counter jumps by itself | Meta / UI | Intense | ✅ |
 | 47 | Subtitles don't match the announcement | Meta / UI | Creepy | ⏳ needs PA voice |
 | 48 | Every coach has the same passenger | Inside the train | Creepy | ⏳ needs NPCs |
+| — | Ad screen shows a live feed of you from behind | Reactive | Creepy | ✅ |
+| — | A rule on the notice board has changed | Text and signage | Creepy | ✅ |
 | — | Forward train's destination board is blank | Inside the train | Creepy | ✅ |
-| — | Forward train has no driver | Inside the train | — | ⏳ |
-| — | Coach is empty at rush hour | Inside the train | — | ⏳ |
-| — | In-coach display shows the wrong direction | Inside the train | — | ⏳ |
-| — | "Agla station: [same station]" before arrival | Inside the train | — | ⏳ |
+| — | Forward train has no driver | Inside the train | Creepy | ✅ (seen in the cab from the platform) |
+| — | Coach is empty at rush hour | Inside the train | Subtle | ✅ |
+| — | In-coach display shows the wrong direction | Inside the train | Subtle | ✅ (window LED) |
+| — | "Agla station: [same station]" before arrival | Inside the train | Creepy | ✅ (window LED, before you board) |
 
 ## Station props
 
@@ -214,12 +248,13 @@ The station's models are built in Blender by [`art/build_props.py`](art/build_pr
 - pillar
 - lift doors
 - token vending machine
-- metro coach (outside, with doors, windows and line-colour stripes)
-- coach interior (benches, poles, grab handles, window band) for the train ride
+- metro coach: hollow, with see-through windows and door glass and the full interior inside (seen from the platform through the glass screen doors). Outside: doors with black surrounds and amber door lamps, window gaskets, line-colour stripes, roof AC units, underframe boxes, gangway bellows, a number plate
+- coach interior for the train ride: stainless long benches with seat grooves, glass draft screens, yellow poles, hanging grab handles, route maps (`RouteMap*`) and ads over the windows, an LED display frame (`Display_L`) where the game writes `NEXT STATION`, doors with a red status lamp and alarm button, yellow door floor plates, a light strip and AC grilles
+- stairs: one straight flight (3.5 m down, 6 m long) with yellow edge strips, stringers and handrails, exported twice: `stairs` (20 steps) and `stairs_extra` (28 steps, for anomaly #34)
 
 Wall, floor, ceiling and track-pit textures come from [`art/build_textures.py`](art/build_textures.py) (cream ceramic tiles, speckled granite floor, metal ceiling slats, concrete). They are mapped world-space, so every wall gets tiles at the right size without UVs.
 
-The **people** come from [`art/build_people.py`](art/build_people.py): a commuter with a backpack, a woman in a maroon kurta with a phone, a security guard with a beret and moustache, and a sweeper in an orange vest. Each is one smooth body (a stick skeleton through Blender's Skin and Subdivision modifiers) with a face, ears and hair, rigged with 18 bones and two animations, `Idle` and `Walk`. [`art/people_preview.png`](art/people_preview.png) shows them all.
+The **people** come from [`art/build_people.py`](art/build_people.py): an office commuter (glasses, watch, shirt pocket and buttons, padded backpack with straps), a woman in a maroon kurta (mustard dupatta, bindi, earrings, bangles, a plait, phone in hand), a security guard (beret with badge, epaulettes, chest badge and name plate, whistle cord, a lathi on the belt) and a sweeper (cap, orange vest with reflective bands, a long jhadu). Everyone has eyes with whites, a chin, collar and hands with a thumb. Each is one smooth body (a stick skeleton through Blender's Skin and Subdivision modifiers) with a face, ears and hair, rigged with 18 bones and three animations: `Idle`, `Walk`, and `Run` (high knees, pumping arms, a forward lean) for the guard charge and the passage runner. [`art/people_preview.png`](art/people_preview.png) shows them all.
 
 ```powershell
 & "C:\Program Files\Blender Foundation\Blender 5.3\blender.exe" --background --factory-startup --python art/build_people.py
@@ -234,13 +269,28 @@ To change a prop, edit the script and rerun it with Blender. It overwrites the `
 ## Quick checklist per loop
 
 1. **Read the top line**: which decision point? You only need to check up to there.
-2. **Spawn**: name sign = HUD? Lights not red? Clock clockwise? Poster square top-left? Strip all yellow? Dustbin on the right? Lift closed? Two cameras? Gates closed? PA line normal?
-3. **Passage**: extinguisher red? `PLATFORM 1 & 2`? Ceiling normal? No door or ringing on the left? Tube steady?
-4. **Escalator**: steps going down? Board `2 MIN`?
-5. **Platform**: sticker inside the edge? Destination shown? Far end lit?
+2. **Spawn**: name sign = HUD? Notice says `turn BACK`? Lights not red? Clock clockwise? Poster square top-left, eyes looking up-right? Stairs strips spaced normally? Ad on the screen? Sweeper where he was? Only your own footsteps? Strip all yellow? Dustbin on the right? Lift closed? Two cameras? Gates closed? PA line normal?
+3. **Passage**: empty? Extinguisher red? `PLATFORM 1 & 2`? Ceiling normal? No door or ringing on the left? Tube steady?
+4. **Escalator**: steps going down? Bottom getting closer? Board `2 MIN`?
+5. **Platform**: people in the forward train? Its LEDs say the next station? Driver in the cab at the far end? Sticker inside the edge? Backpack commuter keeps facing the doors when you look at him? Destination shown? Far end lit?
 6. Anything off → **back**. All fine → **forward**.
 
 ## Cheating while testing
+
+### Debug keys (editor / debug builds only)
+
+Press these during a loop to test any anomaly straight away. The loop restarts at the spawn with that anomaly, and an orange line under the HUD says which one, where it is and which decision point it's using.
+
+| Key | Does |
+|---|---|
+| **F2** | Next anomaly in the catalog |
+| **F1** | Previous anomaly (the first press goes to the last one) |
+| **F3** | Clean loop, no anomaly |
+| **F4** | Skip to the next station, as if you'd called this loop right (no ride, no replay). At station 8 the exit opens |
+
+The decision point is picked so the anomaly is fair: **AFC gates** for the guard charge and the passage runner, the **escalator** for the endless escalator, the **train** for everything else. Your decision then plays out normally (right/wrong call, replay, next station). Once you use a debug key, the run **stops saving**, so Lost & Found, best station and best time aren't affected. Exported release builds ignore these keys.
+
+### Output log
 
 Every loop prints a line to Godot's **Output** panel:
 
@@ -269,6 +319,11 @@ Prints `ALL TESTS PASSED`. The tests cover:
 - the save file: round-trip, fastest time kept, a save from a newer build ignored
 - the wrong-call replay window
 - physics walks for both choices at the train, the escalator and the gates
+- the reactive anomalies (poster eyes, footsteps behind you, the ad camera feed, the sweeper and the commuter) and the spatial ones (longer passage, endless escalator, passage runner)
+- the stairwell: walking down to the shutter and back, the railing, 20 vs 28 steps
+- the pause menu, hardcore mode, English/Hindi switching (menu, rules board, decision hint, the rules anomaly in both) and that settings are saved
+- gamepad: sticks walk and look, A uses the token machine; the guard chase plays the `Run` cycle
+- the parked trains: passengers, driver, window LEDs, and the four train anomalies
 
 ## Adding an anomaly
 

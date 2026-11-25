@@ -12,7 +12,7 @@ First-person anomaly-spotting game set in a looping underground metro station (f
 | Walk | W A S D or arrow keys |
 | Look | Mouse |
 | Free the mouse | Esc (click to capture it again) |
-| Use (buy a token at the token machine) | E, while looking at it |
+| Use: buy a token at the machine, pick a token up | E, while looking at it |
 
 ## The rules
 
@@ -58,11 +58,11 @@ Learn this on loop 1. It's what you compare against every time after.
 | Sign over the passage opening | Station name in white capitals, `STATION n / 8` under it (and the same name in the top-left HUD) |
 | Clock, front wall left of the opening | Red second hand going **clockwise** |
 | Yellow tactile strip on the floor, spawn → gates | Yellow all the way |
-| Left wall | Blue token machine by the start (screen shows `<this station> → <next>`, **tray empty**; press E to buy a token), lit cream poster (**red square top-left**, `SAFE TRAVEL →` / `KEEP LEFT` / `MIND THE GAP`), water cooler near the gates with a **dry floor** |
+| Left wall | Blue token machine by the start (screen shows `<this station> → <next>`, **tray empty**; press E to buy a token, E again on the token to pick it up; the gates take it as you walk through), lit cream poster (**red square top-left**, `SAFE TRAVEL →` / `KEEP LEFT` / `MIND THE GAP`), water cooler near the gates with a **dry floor** |
 | Right wall | Green `EXIT →` sign (points back towards the real exit behind you), **closed** lift doors, a **green dustbin on this wall** near the start |
 | Ceiling, just before the gates | **Two** CCTV cameras, one each side |
 | AFC gates | Red flaps **closed**; they open only when you walk up to them |
-| People | A **security guard** standing right of the gates, facing you; a **sweeper** in an orange vest on the left, half turned away |
+| People | A **security guard** standing right of the gates, facing you; a **sweeper** in an orange vest on the left, half turned away; a commuter with a backpack **pacing up and down** the right side. Everyone breathes and looks around a little |
 | Lights | Dim, pale greenish |
 | PA subtitle on arrival | `Yeh <name> station hai. This is <name>.` |
 
@@ -128,20 +128,21 @@ All of these mean: **take the BACK choice.** Tier sets when they can appear: **S
 | 24 | Guard watches you | Concourse, by the gates | The guard **turns to face you** and slowly follows you around the concourse |
 | 25 | Everyone faces one wall | Concourse and platform | The guard, the sweeper and both commuters all stand **facing the right-hand wall** |
 | 26 | Token machine won't stop | Concourse, left wall by the start | Tokens keep **dropping on their own** with a clatter, filling the tray and spilling over the floor |
+| 27 | Everyone freezes | Concourse (and platform) | The pacing commuter **stops mid-step** and nobody moves at all, not even breathing |
 
 ### Intense (stations 7 and 8)
 
 | # | Anomaly | Where | Tell |
 |---|---|---|---|
-| 27 | HUD counter jumps | Top-left HUD | The count **flickers to `8 / 8`** every few seconds, then back |
-| 28 | Lights die towards you | Everywhere | Lights switch off **one by one** from the platform end towards you, each with a heavy clunk |
+| 28 | HUD counter jumps | Top-left HUD | The count **flickers to `8 / 8`** every few seconds, then back |
+| 29 | Lights die towards you | Everywhere | Lights switch off **one by one** from the platform end towards you, each with a heavy clunk |
 
 ### No anomaly
 If everything matches the "normal" tables (up to the decision point), take the **forward** choice.
 
 ## Full anomaly list (GDD)
 
-The GDD's 48-anomaly pool plus its train-side extras. ✅ = in the game now (28), ⏳ = planned.
+The GDD's 48-anomaly pool plus its train-side extras. ✅ = in the game now (29), ⏳ = planned.
 
 | GDD # | Anomaly | Category | Tier | Status |
 |---|---|---|---|---|
@@ -189,7 +190,7 @@ The GDD's 48-anomaly pool plus its train-side extras. ✅ = in the game now (28)
 | 42 | Platform floods with water | Danger | Intense | ⏳ |
 | 43 | Clock runs backwards | Time | Subtle | ✅ |
 | 44 | "Next train: 88 min" | Time | Subtle | ✅ |
-| 45 | Crowd freezes mid-step | Time | Creepy | ⏳ needs NPCs |
+| 45 | Crowd freezes mid-step | Time | Creepy | ✅ |
 | 46 | HUD station counter jumps by itself | Meta / UI | Intense | ✅ |
 | 47 | Subtitles don't match the announcement | Meta / UI | Creepy | ⏳ needs PA voice |
 | 48 | Every coach has the same passenger | Inside the train | Creepy | ⏳ needs NPCs |
@@ -215,9 +216,14 @@ The station's models are built in Blender by [`art/build_props.py`](art/build_pr
 - token vending machine
 - metro coach (outside, with doors, windows and line-colour stripes)
 - coach interior (benches, poles, grab handles, window band) for the train ride
-- four people: two commuters (one with a backpack, one in a kurta with a phone), a security guard and a sweeper. Each has a separate `Head` node so the game can turn it
 
 Wall, floor, ceiling and track-pit textures come from [`art/build_textures.py`](art/build_textures.py) (cream ceramic tiles, speckled granite floor, metal ceiling slats, concrete). They are mapped world-space, so every wall gets tiles at the right size without UVs.
+
+The **people** come from [`art/build_people.py`](art/build_people.py): a commuter with a backpack, a woman in a maroon kurta with a phone, a security guard with a beret and moustache, and a sweeper in an orange vest. Each is one smooth body (a stick skeleton through Blender's Skin and Subdivision modifiers) with a face, ears and hair, rigged with 18 bones and two animations, `Idle` and `Walk`. [`art/people_preview.png`](art/people_preview.png) shows them all.
+
+```powershell
+& "C:\Program Files\Blender Foundation\Blender 5.3\blender.exe" --background --factory-startup --python art/build_people.py
+```
 
 To change a prop, edit the script and rerun it with Blender. It overwrites the `.gltf` files, [`art/platform8_props.blend`](art/platform8_props.blend) and [`art/preview.png`](art/preview.png):
 
@@ -257,7 +263,8 @@ Prints `ALL TESTS PASSED`. The tests cover:
 - the picker over 300 seeds (first loop empty, never more than 2 empty loops in a row, no category twice in a row, no repeats, no category over 20% of the pool)
 - decision-point unlocks, and that anomalies never sit past the decision point
 - apply/revert for every anomaly, and that the guard really follows you
-- the token machine: looking at it shows the prompt, a real E key press drops a token, arrival empties the tray
+- the token machine: looking at it shows the prompt, a real E key press drops a token, E on the token picks it up, arrival empties the tray, and walking through the AFC gates uses it up
+- the pacing commuter walks, freezes for #45, and walks on after
 - a scripted 8-station run, including the ending screen and what it saves
 - the save file: round-trip, fastest time kept, a save from a newer build ignored
 - the wrong-call replay window

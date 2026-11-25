@@ -10,6 +10,7 @@ const ALL := [
 	preload("res://game/data/anomalies/clock_backwards.tres"),
 	preload("res://game/data/anomalies/cooler_overflow.tres"),
 	preload("res://game/data/anomalies/crowd_faces_wall.tres"),
+	preload("res://game/data/anomalies/crowd_freezes.tres"),
 	preload("res://game/data/anomalies/dark_platform_end.tres"),
 	preload("res://game/data/anomalies/dustbin_moved.tres"),
 	preload("res://game/data/anomalies/escalator_wrong_way.tres"),

@@ -1,7 +1,7 @@
 extends Anomaly
 ## #19 The guard turns to watch you and drifts after you, never closer than 3 m. Slot: Props/People/Guard.
 
-const SPEED := 0.5
+const SPEED := 0.9  # a slow walk; the Walk cycle looks right from about here
 const KEEP_AWAY := 3.0
 const AREA := Rect2(-9.0, -15.0, 18.0, 14.0)  # concourse floor (x, z), so he never leaves it
 
@@ -20,14 +20,15 @@ func apply(slot: Node) -> void:
 		if to.length() < 0.01:
 			return
 		guard.look_at(guard.global_position + to, Vector3.UP, true)  # true: the model's front is +Z
-		if to.length() > KEEP_AWAY:
-			var step := to.normalized() * SPEED * guard.get_process_delta_time()
-			var p := guard.position + step
-			if AREA.has_point(Vector2(p.x, p.z)):
-				guard.position = p
+		var p := guard.position + to.normalized() * SPEED * guard.get_process_delta_time()
+		var walking := to.length() > KEEP_AWAY and AREA.has_point(Vector2(p.x, p.z))
+		if walking:
+			guard.position = p
+		NpcWalker.play(guard, &"Walk" if walking else &"Idle")
 	_tick.call()  # turn at once
 	guard.get_tree().process_frame.connect(_tick)
 
 func revert(slot: Node) -> void:
 	slot.get_tree().process_frame.disconnect(_tick)
 	slot.transform = _home
+	NpcWalker.play(slot, &"Idle")

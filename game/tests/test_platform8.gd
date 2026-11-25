@@ -123,7 +123,7 @@ func _test_anomalies_revert() -> void:
 	root.add_child(game)
 	await process_frame  # _ready() has not run yet inside _initialize
 	var station: Station = game.station
-	_check(AnomalyCatalog.ALL.size() == 28, "28 anomalies in catalog (got %d)" % AnomalyCatalog.ALL.size())
+	_check(AnomalyCatalog.ALL.size() == 29, "29 anomalies in catalog (got %d)" % AnomalyCatalog.ALL.size())
 	var ids := {}
 	var per_category := {}
 	for data: AnomalyData in AnomalyCatalog.ALL:
@@ -156,6 +156,19 @@ func _test_anomalies_revert() -> void:
 	_check(guard.global_position.distance_to(game.player.global_position) < gap - 0.2, "guard follows the player")
 	watch.revert(guard)
 	_check(guard.transform == home, "guard goes back to his post")
+	# The walker paces; #45 freezes him mid-step and revert lets him walk on.
+	var walker: Node3D = station.get_node("Props/Walker")
+	var was := walker.position
+	await create_timer(0.5).timeout
+	_check(walker.position != was, "walker walks")
+	var freeze := Anomaly.create(load("res://game/data/anomalies/crowd_freezes.tres"))
+	freeze.apply(walker)
+	was = walker.position
+	await create_timer(0.5).timeout
+	_check(walker.position == was, "frozen walker stays put")
+	freeze.revert(walker)
+	await create_timer(2.0).timeout  # may be in his end-of-path pause
+	_check(walker.position != was, "walker walks on after revert")
 	for c in per_category:
 		_check(per_category[c] <= ceili(AnomalyCatalog.ALL.size() * 0.2), "category %s over 20%% of the pool" % c)
 	game.free()

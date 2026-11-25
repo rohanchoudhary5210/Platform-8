@@ -229,7 +229,9 @@ func _test_walk() -> void:
 	var boards := []
 	game.station.decided.connect(func(opp): boards.append(opp))
 	# Walk 1: forward train (right door). First loop is empty, so it's the right call.
+	game.player.tokens = 1
 	var ok := await _walk(game.player, ROUTE + [Vector2(5.0, -85)])
+	_check(game.player.tokens == 0, "the AFC gate takes your token")
 	_check(ok and boards == [false], "walk 1 reaches the FORWARD door (boards=%s)" % [boards])
 	_check(game.player.global_position.y < -8.5, "walk 1 got down the escalator")
 	await _finish_ride(game)
@@ -316,6 +318,29 @@ func _test_token_machine() -> void:
 	await process_frame
 	_check(tvm.tokens.get_child_count() == 1, "E dispenses one token (got %d)" % tvm.tokens.get_child_count())
 	_check(tvm.screen.text.contains(game.loop.station_name.to_upper()), "screen shows this station")
+	# Pick it up: aim at the token in the tray and press E again.
+	var token: Node3D = tvm.tokens.get_child(0)
+	await create_timer(0.4).timeout  # let it land in the tray
+	game.player.place(Transform3D(Basis(Vector3.UP, PI / 2), Vector3(-8.6, 1.0, token.global_position.z)))
+	for i in 3:
+		await physics_frame
+	var cam: Vector3 = game.player.camera.global_position
+	game.player.head.rotation.x = -atan2(cam.y - token.global_position.y, cam.x - token.global_position.x)  # look down at it
+	for i in 3:
+		await physics_frame
+	_check(game.player.interactable() == token, "looking at the token in the tray")
+	var up := InputEventKey.new()
+	up.physical_keycode = KEY_E
+	Input.parse_input_event(up)
+	await process_frame
+	var again := InputEventKey.new()
+	again.physical_keycode = KEY_E
+	again.pressed = true
+	Input.parse_input_event(again)
+	await process_frame
+	_check(game.player.tokens == 1 and tvm.tokens.get_child_count() == 0, "E picks the token up")
+	await physics_frame
+	_check(game.hud("Tokens").text.contains("1"), "HUD shows the token")
 	game.player.place(game.station.spawn.global_transform)
 	for i in 3:
 		await physics_frame

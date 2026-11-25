@@ -19,6 +19,7 @@ var active := true:
 @onready var camera: Camera3D = $Head/Camera3D
 
 var sensitivity_scale := 1.0  # from the save's settings
+var tokens := 0  # metro tokens picked up; the AFC gates take one as you pass
 var _walked := 0.0
 var _step := AudioStreamPlayer.new()
 var _look := RayCast3D.new()
@@ -32,6 +33,7 @@ func _ready() -> void:
 	_step.volume_db = -10.0
 	add_child(_step)
 	_look.target_position = Vector3(0, 0, -1.8)  # arm's reach
+	_look.collision_mask = 1 | TokenMachine.TOKEN_LAYER
 	camera.add_child(_look)
 
 ## What you're looking at that can be used (has interact()), or null.
@@ -56,7 +58,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_E:
 		var thing := interactable()
 		if thing:
-			thing.interact()
+			thing.interact(self)
 	elif event.is_action_pressed("ui_cancel"):
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	elif event is InputEventMouseButton and event.pressed:

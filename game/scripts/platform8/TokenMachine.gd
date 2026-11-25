@@ -8,6 +8,29 @@ const PROMPT := "[E]  Buy token  ·  ₹ 20"
 const TRAY_SIZE := 5  # after this, tokens spill onto the floor
 const SLOT := Vector3(0, 0.5, 0.31)
 const TRAY := Vector3(0, 0.45, 0.33)
+## Tokens sit on their own physics layer: the look-ray sees them, the player's body walks over them.
+const TOKEN_LAYER := 1 << 7
+
+## One dispensed token. Look at it and press E to pick it up.
+class Token extends MeshInstance3D:
+	func _init() -> void:
+		var body := StaticBody3D.new()
+		body.collision_layer = TOKEN_LAYER
+		body.collision_mask = 0
+		var shape := CollisionShape3D.new()
+		var ball := SphereShape3D.new()
+		ball.radius = 0.07  # bigger than the token so it's easy to aim at
+		shape.shape = ball
+		body.add_child(shape)
+		add_child(body)
+
+	func prompt() -> String:
+		return "[E]  Take token"
+
+	func interact(by: Node) -> void:
+		by.tokens += 1
+		get_parent().remove_child(self)
+		queue_free()
 
 var screen: Label3D
 var tokens := Node3D.new()
@@ -57,7 +80,7 @@ func set_route(from: String, to: String) -> void:
 	screen.text = "SELECT DESTINATION\n%s  →  %s\n₹ 20   ·   PRESS E" % [from.to_upper(), to.to_upper()]
 	clear_tokens()
 
-func interact() -> void:
+func interact(_by: Node) -> void:
 	dispense()
 
 func prompt() -> String:
@@ -65,7 +88,7 @@ func prompt() -> String:
 
 ## Drops one token: into the tray, or onto the floor once the tray is full.
 func dispense() -> void:
-	var t := MeshInstance3D.new()
+	var t := Token.new()
 	t.mesh = _mesh
 	t.position = SLOT
 	tokens.add_child(t)

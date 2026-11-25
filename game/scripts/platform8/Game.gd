@@ -71,6 +71,7 @@ func _physics_process(delta: float) -> void:
 		replay.record(player.camera.global_transform, delta)
 	var thing := player.interactable()
 	hud("Prompt").text = thing.prompt() if thing else ""
+	hud("Tokens").text = "TOKEN  × %d" % player.tokens if player.tokens > 0 else ""
 
 func hud(label: String) -> Label:
 	return _hud.get_node(label)
@@ -191,6 +192,7 @@ func _build_hud() -> void:
 	_label("PA", 26, Control.PRESET_CENTER_BOTTOM, Vector2(0, -110))
 	_label("Caption", 20, Control.PRESET_CENTER_BOTTOM, Vector2(0, -50))
 	_label("Prompt", 18, Control.PRESET_CENTER, Vector2(0, 60))
+	_label("Tokens", 16, Control.PRESET_TOP_LEFT, Vector2(24, 50))
 	var end := _label("End", 40, Control.PRESET_FULL_RECT, Vector2.ZERO)
 	end.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	end.visible = false

@@ -425,6 +425,17 @@ func _build_decisions() -> void:
 	_stickers[&"gates"] = _sticker(Vector3(0, 0.01, -14.4), Vector3(19.5, 0.01, 1.0))
 	_dp_area(&"gates", &"arm", Vector3(20, 2, 1.5), Vector3(0, 1, -14.5))
 	_dp_area(&"gates", &"forward", Vector3(20, 2, 1), Vector3(0, 1, -18.5))
+	# Walking forward through the gates with a token in hand: the reader takes it.
+	var reader := _area(self, Vector3(6, 2, 0.6), Vector3(0, 1, -16))
+	var beep := AudioStreamPlayer3D.new()
+	beep.stream = SynthAudio.chime()
+	beep.bus = Atmosphere.BUS
+	beep.pitch_scale = 2.5  # short reader beep, not the PA chime
+	reader.add_child(beep)
+	reader.body_entered.connect(func(b):
+		if b is StationPlayer and b.tokens > 0 and b.velocity.z < 0.0:
+			b.tokens -= 1
+			beep.play())
 	_dp_area(&"gates", &"back", Vector3(20, 2, 1), Vector3(0, 1, -9))
 	# Escalator: at the bottom, walk on to the platform (forward) or ride back up.
 	_stickers[&"escalator"] = _sticker(Vector3(0, y + 0.01, -61.2), Vector3(3.9, 0.01, 1.0))

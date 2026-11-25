@@ -19,7 +19,9 @@ const YELLOW := Color(0.85, 0.7, 0.1)
 const LIGHT_COLOUR := Color(0.82, 1.0, 0.86)  # tired fluorescent tubes
 const ESC_DROP := 10.0
 const ESC_RUN := 20.0
-const ESC_STEPS := 16
+const ESC_STEPS := 50  # 0.2 m riser on a 0.4 m tread: 50 steps make the 10 m drop
+const ESC_LANES := [-0.95, 0.95]  # left lane runs up, right lane runs down (art/build_props.py escalator)
+const UP_SPEED := -0.6  # the up lane; the down lane's speed is EscalatorSteps' "speed" meta
 const GATE_OPEN_DISTANCE := 2.0
 const STAIRS_X := -9.05  # stairwell down the left concourse wall (art/build_props.py stairs: 3.5 m drop, 6 m run)
 const STAIRS_TOP_Z := -5.2
@@ -51,6 +53,8 @@ var _armed := false
 var _stickers := {}  # decision -> Node3D
 var _door_fill: Array[CSGBox3D] = []
 var _esc_offset := 0.0
+var _esc_up_offset := 0.0
+var _step: Mesh
 var _player: Node3D
 var _second_hand: Node3D
 var _surface_mats := {}
@@ -140,11 +144,17 @@ func _process(delta: float) -> void:
 	# Clock second hand: clockwise unless an anomaly sets dir to -1.
 	var clock := props.get_node("Clock")
 	_second_hand.rotation.z -= clock.get_meta("dir") * TAU / 60.0 * delta
-	# Escalator step lines run down (positive speed) or up.
+	# Escalator: the down lane runs at its "speed" meta (an anomaly can reverse it), the up lane at UP_SPEED.
+	# Steps and the ramp you stand on move together, so you ride exactly as fast as the steps.
 	var steps := props.get_node("EscalatorSteps")
-	_esc_offset = fposmod(_esc_offset + steps.get_meta("speed") * delta, _esc_length())
-	for i in steps.get_child_count():
-		steps.get_child(i).position = _esc_point(fposmod(i * _esc_length() / ESC_STEPS + _esc_offset, _esc_length()))
+	var speed: float = steps.get_meta("speed")
+	_esc_offset = fposmod(_esc_offset + speed * delta, _esc_length())
+	_esc_up_offset = fposmod(_esc_up_offset + UP_SPEED * delta, _esc_length())
+	_place_steps(steps, ESC_LANES[1], _esc_offset)
+	_place_steps(get_node("Escalator/UpSteps"), ESC_LANES[0], _esc_up_offset)
+	var down_dir := Vector3(0, -ESC_DROP, -ESC_RUN).normalized()
+	(get_node("Escalator/LaneDown") as StaticBody3D).constant_linear_velocity = down_dir * speed
+	(get_node("Escalator/LaneUp") as StaticBody3D).constant_linear_velocity = down_dir * UP_SPEED
 	# AFC flaps retract when the player is near, or always when an anomaly says so.
 	if _player == null:
 		_player = get_tree().get_first_node_in_group(&"player")
@@ -371,7 +381,32 @@ func _build_escalator() -> void:
 	var g := _node("Escalator", self)
 	var tilt := _esc_tilt()
 	var mid := Vector3(0, -ESC_DROP / 2.0, -40 - ESC_RUN / 2.0)
-	_box(g, Vector3(4, 0.5, _esc_length()), mid + Vector3(0, -0.25, 0), Color(0.45, 0.45, 0.47)).rotation.x = tilt
+	# Dark pit under the moving steps (the steps' risers hang below the nosing line).
+	_box(g, Vector3(4, 0.5, _esc_length()), mid + Vector3(0, -0.5, 0), Color(0.1, 0.1, 0.11), false).rotation.x = tilt
+	_model("escalator", g, "Model", Vector3(0, 0, -40))
+	# What you actually stand on: one smooth ramp per lane along the step nosings. Their constant velocity
+	# carries you like the steps do. Solid decks between and beside the lanes keep you on your lane.
+	for lane in ESC_LANES:
+		var ramp := _solid(g, Vector3(1.2, 0.5, _esc_length()), Vector3(lane, mid.y - 0.25 / cos(tilt), mid.z), tilt)
+		ramp.name = "LaneDown" if lane > 0 else "LaneUp"
+	for x in [0.0, 1.735, -1.735]:
+		var w := 0.86 if x == 0.0 else 0.53
+		_solid(g, Vector3(w, 1.1, _esc_length()), Vector3(x, mid.y + 0.55, mid.z), tilt)
+		_solid(g, Vector3(w, 1.1, 1.2), Vector3(x, 0.55, -39.4))                     # top newel
+		_solid(g, Vector3(w, 1.1, 1.2), Vector3(x, -ESC_DROP + 0.55, -60.6))         # bottom newel
+	var hum := AudioStreamPlayer3D.new()  # the escalator motor, heard as you ride
+	hum.stream = SynthAudio.hum()
+	hum.bus = Atmosphere.BUS
+	hum.volume_db = -14.0
+	hum.unit_size = 3.0
+	hum.position = mid
+	hum.autoplay = true
+	g.add_child(hum)
+	var up := _node("UpSteps", g)
+	for i in ESC_STEPS:
+		var m := MeshInstance3D.new()
+		m.mesh = _step_mesh()
+		up.add_child(m)
 	_box(g, Vector3(4, 0.5, _esc_length()), mid + Vector3(0, 3.0, 0), CEILING).rotation.x = tilt
 	for x in [-2.25, 2.25]:
 		_box(g, Vector3(0.5, 4.5, _esc_length()), mid + Vector3(x, 1.75, 0), WALL).rotation.x = tilt
@@ -577,11 +612,12 @@ func _build_props() -> void:
 	_box(door, Vector3(0.06, 2.1, 1.0), Vector3(0, 1.05, 0), Color(0.3, 0.2, 0.12), false)
 	_box(door, Vector3(0.04, 0.05, 0.12), Vector3(0.05, 1.0, 0.35), STEEL, false)
 
-	var steps := _node("EscalatorSteps", props)
+	var steps := _node("EscalatorSteps", props)  # the down lane's steps
 	steps.set_meta("speed", 0.6)
 	for i in ESC_STEPS:
-		var s := _box(steps, Vector3(3.6, 0.03, 0.1), Vector3.ZERO, Color(0.2, 0.2, 0.2), false)
-		s.rotation.x = _esc_tilt()
+		var m := MeshInstance3D.new()
+		m.mesh = _step_mesh()
+		steps.add_child(m)
 
 	var boards := _node("TrainBoards", props)
 	var fwd := _label(boards, "", Vector3(5.47, -8.3, -85), -PI / 2, 40)
@@ -671,10 +707,36 @@ func _esc_length() -> float:
 func _esc_tilt() -> float:
 	return -atan2(ESC_DROP, ESC_RUN)
 
-## Point on the escalator surface, s metres down from the top.
+## Point on the step nosing line, s metres down the slope from the top.
 func _esc_point(s: float) -> Vector3:
 	var down := Vector3(0, -ESC_DROP, -ESC_RUN).normalized()
-	return Vector3(0, 0.03, -40) + down * s
+	return Vector3(0, 0, -40) + down * s
+
+func _place_steps(steps: Node, lane: float, offset: float) -> void:
+	for i in steps.get_child_count():
+		var p := _esc_point(fposmod(i * _esc_length() / ESC_STEPS + offset, _esc_length()))
+		steps.get_child(i).position = Vector3(lane, p.y, p.z)
+
+## The step mesh from escalator_step.gltf, shared by all 100 steps.
+func _step_mesh() -> Mesh:
+	if _step == null:
+		var scene: Node = load(MODELS % "escalator_step").instantiate()
+		_step = (scene.find_child("Step", true, false) as MeshInstance3D).mesh
+		scene.free()
+	return _step
+
+## An invisible solid box, optionally tilted about X like the escalator.
+func _solid(parent: Node, size: Vector3, pos: Vector3, tilt := 0.0) -> StaticBody3D:
+	var body := StaticBody3D.new()
+	body.position = pos
+	body.rotation.x = tilt
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = size
+	shape.shape = box
+	body.add_child(shape)
+	parent.add_child(body)
+	return body
 
 ## Instance a prop from art/build_props.py. solid = optional box collider (size, sitting on the floor).
 func _model(file: String, parent: Node, n: String, pos: Vector3, yaw := 0.0, solid := Vector3.ZERO) -> Node3D:

@@ -4,7 +4,7 @@ extends Anomaly
 ## Escalator decision only. Slot: Props/EscalatorSteps.
 
 const LOOP_AT := -58.0  # z near the foot; the back zone (z -51) stays above the loop
-const BACK := Vector3(0, 2.5, 5.0)  # up the slope by exactly 4 step spacings, so the step lines match
+const BACK := Vector3(0, 2.4, 4.8)  # up the slope by exactly 12 steps (0.2 m x 0.4 m), so the steps match
 
 var loops := 0  # for tests
 var _last_z := INF

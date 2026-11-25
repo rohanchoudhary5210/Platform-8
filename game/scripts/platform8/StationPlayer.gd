@@ -29,6 +29,7 @@ var _look := RayCast3D.new()
 
 func _ready() -> void:
 	add_to_group(&"player")
+	platform_on_leave = PLATFORM_ON_LEAVE_DO_NOTHING  # stepping off the escalator mustn't fling you
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	camera.fov = 68.0
 	_step.stream = SynthAudio.footstep()

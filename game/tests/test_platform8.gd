@@ -23,6 +23,7 @@ func _initialize() -> void:
 	await _test_token_machine()
 	await _test_debug_keys()
 	await _test_stairs()
+	await _test_escalator_ride()
 	await _test_menus()
 	await _test_train_insides()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(TEST_SAVE))
@@ -345,7 +346,7 @@ func _test_spatial() -> void:
 	station.set_decision(&"escalator")
 	game.player.place(station.spawn.global_transform)
 	var endless := _reactive("endless_escalator", station)
-	await _walk(game.player, ROUTE.slice(0, 4) + [Vector2(0, -56)])
+	await _walk(game.player, ROUTE.slice(0, 4) + [Vector2(0.95, -56)])
 	game.player.rotation.y = 0.0  # facing down the escalator
 	_hold_w(true)
 	await create_timer(4.0).timeout
@@ -353,7 +354,7 @@ func _test_spatial() -> void:
 	_check(endless[0].loops >= 2 and game.player.global_position.z > -59.0,
 		"escalator never reaches the bottom (loops %d, z %.1f)" % [endless[0].loops, game.player.global_position.z])
 	_check(station._armed and choices.is_empty(), "endless escalator arms the escalator decision")
-	await _walk(game.player, [Vector2(0, -49)])
+	await _walk(game.player, [Vector2(0.95, -49)])
 	_check(choices == [true], "riding back up is the back choice (got %s)" % [choices])
 	endless[0].revert(endless[1])
 	await _finish_ride(game)
@@ -443,8 +444,8 @@ func _until_ridden(game: Node) -> void:
 ## Real physics walk: hold W (a real key event) and steer along the route to each train door.
 ## Proves the gates, passage, escalator and platform doors are walkable.
 const ROUTE := [
-	Vector2(0.75, -14), Vector2(0.75, -18), Vector2(0, -22), Vector2(0, -39),  # concourse, AFC gap, passage
-	Vector2(0, -62), Vector2(0, -85),                                         # escalator, platform
+	Vector2(0.75, -14), Vector2(0.75, -18), Vector2(0, -22), Vector2(0.95, -39.2),  # concourse, AFC gap, passage
+	Vector2(0.95, -62), Vector2(0, -85),                                             # down escalator (right lane), platform
 ]
 
 func _test_walk() -> void:
@@ -511,7 +512,7 @@ func _test_walk_decisions() -> void:
 	var cases := [
 		[&"gates", [Vector2(0.75, -14.6), Vector2(0.75, -8)], true],                 # turn back from the gates
 		[&"gates", [Vector2(0.75, -14.6), Vector2(0.75, -19.5)], false],             # tap through
-		[&"escalator", ROUTE.slice(0, 5) + [Vector2(0, -50)], true],                  # ride back up
+		[&"escalator", ROUTE.slice(0, 5) + [Vector2(-0.95, -62.5), Vector2(-0.95, -50)], true],  # take the up escalator back
 		[&"escalator", ROUTE.slice(0, 5) + [Vector2(0, -67)], false],                 # walk on to the platform
 	]
 	for c in cases:
@@ -628,6 +629,31 @@ func _test_debug_keys() -> void:
 	game.free()
 
 ## The stairwell is walkable down to the shutter and back; #34 swaps in a flight with more steps.
+## Standing still on the escalator: the down lane carries you down, the up lane up, at the steps' speed.
+## The wrong-way anomaly makes the down lane carry you up.
+func _test_escalator_ride() -> void:
+	var game: Node = _new_game()
+	root.add_child(game)
+	await process_frame
+	var p: StationPlayer = game.player
+	var ride := func(lane: float) -> float:  # metres along the slope moved in 2 s, + = down
+		p.place(Transform3D(Basis(), Vector3(lane, -4.0 + 1.0, -48)))  # mid-escalator, just above the nosing line
+		for i in 20:
+			await physics_frame  # settle on the ramp
+		var z0 := p.global_position.z
+		await create_timer(2.0).timeout
+		return (z0 - p.global_position.z) / cos(atan2(Station.ESC_DROP, Station.ESC_RUN))
+	var down: float = await ride.call(Station.ESC_LANES[1])
+	_check(absf(down - 1.2) < 0.25, "down escalator carries you down at 0.6 m/s (moved %.2f m)" % down)
+	var up: float = await ride.call(Station.ESC_LANES[0])
+	_check(absf(up + 1.2) < 0.25, "up escalator carries you up (moved %.2f m)" % up)
+	var wrong := Anomaly.create(load("res://game/data/anomalies/escalator_wrong_way.tres"))
+	wrong.apply(game.station.get_node("Props/EscalatorSteps"))
+	var rev: float = await ride.call(Station.ESC_LANES[1])
+	_check(rev < -0.9, "wrong-way escalator carries you up (moved %.2f m)" % rev)
+	wrong.revert(game.station.get_node("Props/EscalatorSteps"))
+	game.free()
+
 func _test_stairs() -> void:
 	var game: Node = _new_game()
 	root.add_child(game)

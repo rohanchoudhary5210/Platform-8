@@ -48,7 +48,7 @@ The choice isn't always at the train. Each station picks one decision point at r
 | Decision point | From station | Forward (nothing wrong) | Back (anomaly) |
 |---|---|---|---|
 | **Train** (platform, middle) | 0 | Right door, `FORWARD ▶` | Left door, `◀ OPPOSITE` |
-| **Escalator bottom** | 2 | Step on the sticker, then walk on to the platform | Step on the sticker, then walk back **up** the escalator |
+| **Escalator bottom** | 2 | Step on the sticker, then walk on to the platform | Step on the sticker, then cross to the **left (up) escalator** and ride it back up |
 | **AFC gates** | 3 | Step on the sticker, then go through the gates | Step on the sticker, then turn round and walk back to the concourse |
 
 You only need to look at the part of the station **before** the decision point. The game never hides the anomaly past it. For example, with the gates decision, the anomaly is always in the concourse.
@@ -90,7 +90,7 @@ Learn this on loop 1. It's what you compare against every time after.
 
 | What | Normal |
 |---|---|
-| Escalator step lines | Moving **down** |
+| Escalators | Two side by side. **Yours (right) runs down** and carries you even if you stand still; the **left one runs up**. Glass sides, black handrails, a soft motor hum |
 | Board at the escalator bottom | Amber `NEXT TRAIN   2 MIN` |
 | Floor sticker by the right door | `MIND THE GAP`, stops at the platform edge |
 | Train behind the right door | Destination `▶ <next station>` |
@@ -121,7 +121,7 @@ All of these mean: **take the BACK choice.** Tier sets when they can appear: **S
 | 8 | Station name backwards | Concourse sign (and platform end) | `KALINDI BAGH` → `HGAB IDNILAK`; compare it with the HUD |
 | 9 | Gates open by themselves | AFC gates | All red flaps already **open** while you're far away |
 | 10 | Water cooler overflows | Concourse, left wall by the gates | A **puddle** spreads across the floor |
-| 11 | Escalator runs the wrong way | Escalator | Step lines move **up** while you walk down |
+| 11 | Escalator runs the wrong way | Escalator | Your (right) escalator's steps move **up**: stand still and it carries you back up |
 | 12 | Red emergency lighting | Everywhere | The whole station is lit **red** |
 | 13 | Tube flickers in a rhythm | Passage ceiling | Off-on-off-on at a perfectly steady beat (not random like the door tube) |
 | 14 | Clock runs backwards | Concourse, front wall | Second hand goes **anticlockwise** |
@@ -250,6 +250,7 @@ The station's models are built in Blender by [`art/build_props.py`](art/build_pr
 - token vending machine
 - metro coach: hollow, with see-through windows and door glass and the full interior inside (seen from the platform through the glass screen doors). Outside: doors with black surrounds and amber door lamps, window gaskets, line-colour stripes, roof AC units, underframe boxes, gangway bellows, a number plate
 - coach interior for the train ride: stainless long benches with seat grooves, glass draft screens, yellow poles, hanging grab handles, route maps (`RouteMap*`) and ads over the windows, an LED display frame (`Display_L`) where the game writes `NEXT STATION`, doors with a red status lamp and alarm button, yellow door floor plates, a light strip and AC grilles
+- escalator: two lanes (up and down) with glass balustrades, black handrails that turn down at the ends, steel decks and skirts with light strips, yellow comb plates and ribbed landing plates. `escalator_step` is one grooved aluminium step with yellow edges; the game moves 50 of them per lane along a true 0.2 m x 0.4 m staircase. You stand on an invisible ramp per lane that moves at the steps' speed, so the escalator really carries you
 - stairs: one straight flight (3.5 m down, 6 m long) with yellow edge strips, stringers and handrails, exported twice: `stairs` (20 steps) and `stairs_extra` (28 steps, for anomaly #34)
 
 Wall, floor, ceiling and track-pit textures come from [`art/build_textures.py`](art/build_textures.py) (cream ceramic tiles, speckled granite floor, metal ceiling slats, concrete). They are mapped world-space, so every wall gets tiles at the right size without UVs.

@@ -15,6 +15,7 @@ Named sub-objects (Body, Hand_Second, Flap_L, Door_L...) are what anomalies will
 import math
 import os
 
+import bmesh
 import bpy
 from mathutils import Vector
 
@@ -491,6 +492,109 @@ def stairs(name, n):
 STAIRS = [lambda: stairs("stairs", 20), lambda: stairs("stairs_extra", 28)]  # exported, not in the preview grid
 
 
+# ── Escalator ────────────────────────────────────────────────────────────
+# Two lanes side by side going down towards +Y (Godot -Z): origin at the top of the step nosing line.
+# The slope is 1:2 (10 m drop over 20 m), the same as a 0.2 m riser on a 0.4 m tread, so the steps
+# make a true staircase on the incline. Lanes at x = -0.95 (up) and +0.95 (down), steps 1.0 m wide.
+ESC_DROP, ESC_RUN = 10.0, 20.0
+ESC_LANES = (-0.95, 0.95)
+ESC_SLOPE = math.atan2(ESC_DROP, ESC_RUN)
+
+
+def esc_z(d):
+    """Height of the nosing line d metres (horizontal) down the run; flat beyond the ends."""
+    return -ESC_DROP * min(max(d, 0.0), ESC_RUN) / ESC_RUN
+
+
+def esc_part(name, r, material, x, w, h, off, d0=0.0, d1=ESC_RUN, bevel=0.0):
+    """A box running along the escalator from d0 to d1, its centre `off` above the nosing line.
+    Sloped on the incline, flat on the landings (d0, d1 both outside 0..ESC_RUN)."""
+    if d1 <= 0.0 or d0 >= ESC_RUN:  # landing: flat
+        return box(name, r, material, (w, d1 - d0, h), (x, (d0 + d1) / 2, esc_z(d0) + off), bevel=bevel)
+    length = (d1 - d0) / math.cos(ESC_SLOPE)
+    mid = (d0 + d1) / 2
+    return box(name, r, material, (w, length, h), (x, mid, esc_z(mid) + off), rot=(-ESC_SLOPE, 0, 0), bevel=bevel)
+
+
+def handrail_end(name, r, material, x, d, z, keep_back):
+    """Handrail turning down at a newel: half a torus in the YZ plane."""
+    bpy.ops.mesh.primitive_torus_add(location=(x, d, z + 0.45), rotation=(0, math.pi / 2, 0),
+                                     major_radius=0.45, minor_radius=0.04, major_segments=32, minor_segments=8)
+    o = bpy.context.active_object
+    o.name = name
+    o.data.materials.append(material)
+    bm = bmesh.new()
+    bm.from_mesh(o.data)
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if (v.co.y > 0.001 if keep_back else v.co.y < -0.001)], context="VERTS")
+    bm.to_mesh(o.data)
+    bm.free()
+    o.parent = r
+    return o
+
+
+def escalator():
+    """Balustrades (glass, steel deck, black handrail, skirt lights), comb plates and landing plates
+    for both lanes. The moving steps are escalator_step, placed by Station.gd."""
+    r = root("escalator")
+    glass = glass_mat("EscGlass", (0.6, 0.75, 0.78), 0.22)
+    rail = mat("Handrail", (0.03, 0.03, 0.03), 0.0, 0.35)
+    deck = mat("EscDeck", (0.6, 0.62, 0.64), 0.35, 0.3)
+    skirt = mat("EscSkirt", (0.5, 0.52, 0.54), 0.35, 0.25)
+    glow = mat("SkirtLight", (0.9, 0.95, 1.0), emit=(0.8, 0.9, 1.0))
+    comb = mat("CombYellow", (0.85, 0.65, 0.08), 0.2, 0.5)
+    plate = mat("LandingPlate", (0.42, 0.43, 0.45), 0.35, 0.45)
+    parts = {"glass": [], "rail": [], "deck": [], "skirt": [], "glow": [], "comb": [], "plate": []}
+    spans = [(-1.2, 0.0), (0.0, ESC_RUN), (ESC_RUN, ESC_RUN + 1.2)]  # top newel, incline, bottom newel
+    for lane in ESC_LANES:
+        for side in (-1, 1):
+            gx, kx = lane + side * 0.6, lane + side * 0.52
+            for i, (d0, d1) in enumerate(spans):
+                parts["glass"].append(esc_part(f"Glass{lane}{side}{i}", r, glass, gx, 0.02, 0.8, 0.55, d0, d1))
+                parts["rail"].append(esc_part(f"Rail{lane}{side}{i}", r, rail, gx, 0.08, 0.05, 0.98, d0, d1, bevel=0.02))
+                parts["skirt"].append(esc_part(f"Skirt{lane}{side}{i}", r, skirt, kx, 0.02, 0.37, -0.065, d0, d1))
+                parts["glow"].append(esc_part(f"Glow{lane}{side}{i}", r, glow, lane + side * 0.505, 0.01, 0.012, 0.11, d0, d1))
+            parts["rail"].append(handrail_end(f"RailTop{lane}{side}", r, rail, gx, -1.2, 0.08, True))
+            parts["rail"].append(handrail_end(f"RailBot{lane}{side}", r, rail, gx, ESC_RUN + 1.2, esc_z(ESC_RUN) + 0.08, False))
+        # Comb plates where the steps slide under, and ribbed landing plates beyond them.
+        for d0, d1, cd in ((-0.35, 0.0, 0.0), (ESC_RUN, ESC_RUN + 0.35, ESC_RUN)):
+            parts["comb"].append(box(f"Comb{lane}{d0}", r, comb, (1.0, 0.08, 0.025), (lane, cd + (-0.04 if d0 < 0 else 0.04), esc_z(cd) + 0.0125)))
+            parts["plate"].append(box(f"CombPlate{lane}{d0}", r, plate, (1.0, d1 - d0, 0.02), (lane, (d0 + d1) / 2, esc_z(cd) + 0.01)))
+        for d0, d1 in ((-1.3, -0.35), (ESC_RUN + 0.35, ESC_RUN + 1.3)):
+            parts["plate"].append(box(f"Landing{lane}{d0}", r, plate, (1.15, d1 - d0, 0.015), (lane, (d0 + d1) / 2, esc_z(d0) + 0.0075)))
+            for k in range(8):  # ribs
+                parts["plate"].append(box(f"Rib{lane}{d0}_{k}", r, plate, (1.1, 0.02, 0.01),
+                                          (lane, d0 + (k + 0.5) * (d1 - d0) / 8, esc_z(d0) + 0.02)))
+    # Decks: the centre one between the lanes, the outer ones out to the shaft walls.
+    for x, w in ((0.0, 0.86), (1.735, 0.53), (-1.735, 0.53)):
+        for i, (d0, d1) in enumerate(spans):
+            parts["deck"].append(esc_part(f"Deck{x}{i}", r, deck, x, w, 0.04, 0.12, d0, d1))
+            parts["deck"].append(esc_part(f"DeckSide{x}{i}", r, deck, x, w - 0.04, 0.3, -0.05, d0, d1))
+    for k, objs in parts.items():  # one mesh per material: a few draw calls, not hundreds
+        join(k.capitalize(), objs).parent = r
+    return r
+
+
+def escalator_step():
+    """One step, origin at its nosing (front top edge), tread running back towards -Y (Godot +Z, uphill).
+    Grooved aluminium tread with yellow demarcation edges, riser below the nosing."""
+    r = root("escalator_step")
+    alu = mat("StepAlu", (0.32, 0.33, 0.35), 0.35, 0.45)
+    yellow = mat("StepYellow", (0.95, 0.75, 0.05), 0.0, 0.5)
+    parts = [box("Tread", r, alu, (1.0, 0.4, 0.03), (0, -0.2, -0.019)),
+             box("Riser", r, alu, (1.0, 0.015, 0.2), (0, -0.0075, -0.1))]
+    for k in range(25):  # cleats
+        parts.append(box(f"Cleat{k}", r, alu, (0.012, 0.4, 0.008), (-0.48 + k * 0.04, -0.2, -0.002)))
+    edges = [box("EdgeFront", r, yellow, (1.0, 0.045, 0.01), (0, -0.0225, 0.0))]
+    for side in (-1, 1):
+        edges.append(box(f"EdgeSide{side}", r, yellow, (0.035, 0.4, 0.01), (side * 0.4825, -0.2, 0.0)))
+    tread = join("Step", parts + edges)
+    tread.parent = r
+    return r
+
+
+ESCALATOR = [escalator, escalator_step]  # exported, not in the preview grid
+
+
 # ── Build, export, preview ───────────────────────────────────────────────
 
 def select_tree(r):
@@ -508,7 +612,7 @@ def reset():
 
 def main():
     # One clean scene per prop, so part names stay exact (no "Body.001") in the exported file.
-    for p in PROPS + TRAINS + STAIRS:
+    for p in PROPS + TRAINS + STAIRS + ESCALATOR:
         reset()
         r = p()
         select_tree(r)
